@@ -128,4 +128,27 @@ TEST(pointer_focus_uses_topmost_eligible_half_open_bounds) {
     CHECK(!focusAtPoint({}, 0, 0));
     CHECK(!focusAtPoint({{1, {0, 0, 0, 10}}}, 0, 0));
 }
+TEST(duplicate_focus_ids_use_the_first_snapshot_without_geometry_or_flag_bypasses) {
+    const std::vector<FocusTarget> geometry{
+        {1, {0, 0, 10, 10}}, {2, {500, 0, 10, 10}},
+        {2, {10, 0, 10, 10}}, {3, {100, 0, 10, 10}}};
+    CHECK(directionalFocus(geometry, 1, FocusDirection::Right) == 3);
+    const std::vector<FocusTarget> flags{
+        {1, {0, 0, 100, 100}}, {2, {10, 0, 100, 100}, false}, {2, {10, 0, 100, 100}}};
+    CHECK(!directionalFocus(flags, 1, FocusDirection::Right));
+    CHECK(!directionalFocus(flags, 2, FocusDirection::Right, true));
+    CHECK(focusAtPoint(flags, 20, 20) == 1);
+    CHECK(cycleFocus(flags, 1) == 1);
+    FocusHistory history;
+    history.remember(2);
+    CHECK(history.fallback(flags) == 1);
+    CHECK(!history.fallback(flags, 1));
+}
+TEST(focus_cycles_do_not_get_stuck_on_duplicate_occurrences) {
+    const std::vector<FocusTarget> targets{
+        {1, {0, 0, 10, 10}}, {1, {10, 0, 10, 10}}, {2, {20, 0, 10, 10}}};
+    CHECK(cycleFocus(targets, 1) == 2);
+    CHECK(cycleFocus(targets, 2, true) == 1);
+    CHECK(!focusAtPoint(targets, 15, 5));
+}
 TEST_MAIN()

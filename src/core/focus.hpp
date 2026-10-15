@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <optional>
+#include <set>
 #include <tuple>
 #include <vector>
 
@@ -22,6 +23,15 @@ inline bool focusEligible(const FocusTarget& target) {
 }
 
 namespace FocusDetail {
+// A repeated ID cannot override the first snapshot's geometry or eligibility.
+inline std::vector<const FocusTarget*> eligibleTargets(const std::vector<FocusTarget>& targets) {
+    std::set<FocusWindowId> seen;
+    std::vector<const FocusTarget*> eligible;
+    eligible.reserve(targets.size());
+    for (const auto& target : targets)
+        if (seen.insert(target.id).second && focusEligible(target)) eligible.push_back(&target);
+    return eligible;
+}
 struct Axis { bool horizontal; int sign; };
 inline std::optional<Axis> axis(FocusDirection direction) {
     switch (direction) {
@@ -48,8 +58,9 @@ inline long long magnitude(long long value) { return value < 0 ? -value : value;
 
 // Back-to-front stacking order: the last eligible hit is topmost.
 inline std::optional<FocusWindowId> focusAtPoint(const std::vector<FocusTarget>& targets, int x, int y) {
-    for (auto it = targets.rbegin(); it != targets.rend(); ++it)
-        if (focusEligible(*it) && contains(it->bounds, x, y)) return it->id;
+    const auto eligible = FocusDetail::eligibleTargets(targets);
+    for (auto it = eligible.rbegin(); it != eligible.rend(); ++it)
+        if (contains((*it)->bounds, x, y)) return (*it)->id;
     return std::nullopt;
 }
 
@@ -70,12 +81,13 @@ public:
     const std::vector<FocusWindowId>& entries() const { return history_; }
     std::optional<FocusWindowId> fallback(const std::vector<FocusTarget>& targets,
                                          std::optional<FocusWindowId> excluded = std::nullopt) const {
+        const auto eligible = FocusDetail::eligibleTargets(targets);
         for (const auto id : history_)
             if (id != excluded)
-                for (const auto& target : targets)
-                    if (target.id == id && focusEligible(target)) return id;
-        for (const auto& target : targets)
-            if (target.id != excluded && focusEligible(target)) return target.id;
+                for (const auto* target : eligible)
+                    if (target->id == id) return id;
+        for (const auto* target : eligible)
+            if (target->id != excluded) return target->id;
         return std::nullopt;
     }
 private:
@@ -87,7 +99,7 @@ inline std::optional<FocusWindowId> cycleFocus(const std::vector<FocusTarget>& t
                                               std::optional<FocusWindowId> current = std::nullopt,
                                               bool reverse = false, bool wrap = true) {
     std::vector<FocusWindowId> eligible;
-    for (const auto& target : targets) if (focusEligible(target)) eligible.push_back(target.id);
+    for (const auto* target : FocusDetail::eligibleTargets(targets)) eligible.push_back(target->id);
     if (eligible.empty()) return std::nullopt;
     const auto found = current ? std::find(eligible.begin(), eligible.end(), *current) : eligible.end();
     if (found == eligible.end()) return reverse ? eligible.back() : eligible.front();
@@ -106,15 +118,18 @@ inline std::optional<FocusWindowId> directionalFocus(const std::vector<FocusTarg
                                                     bool wrap = false) {
     const auto axis = FocusDetail::axis(direction);
     if (!axis) return std::nullopt;
-    const auto source = std::find_if(targets.begin(), targets.end(),
-        [current](const FocusTarget& target) { return target.id == current; });
-    if (source == targets.end() || !focusEligible(*source)) return std::nullopt;
+    const auto eligible = FocusDetail::eligibleTargets(targets);
+    const auto found = std::find_if(eligible.begin(), eligible.end(),
+        [current](const FocusTarget* target) { return target->id == current; });
+    if (found == eligible.end()) return std::nullopt;
+    const auto* source = *found;
     using Score = std::tuple<int, long long, long long, FocusWindowId>;
     const auto choose = [&](bool wrapping) -> std::optional<FocusWindowId> {
         std::optional<Score> best;
         std::optional<FocusWindowId> selected;
-        for (const auto& target : targets) {
-            if (target.id == current || !focusEligible(target)) continue;
+        for (const auto* candidate : eligible) {
+            const auto& target = *candidate;
+            if (target.id == current) continue;
             const auto targetCenter = FocusDetail::center(target.bounds, axis->horizontal);
             const auto forward = axis->sign * (targetCenter -
                                               FocusDetail::center(source->bounds, axis->horizontal));
