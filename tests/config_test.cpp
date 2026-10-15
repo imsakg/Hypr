@@ -77,4 +77,15 @@ TEST(bounded_fields_leave_command_tail_verbatim) {
     CHECK(splitFields("a,b", 8) == splitFields("a,b"));
 }
 
+TEST(flat_documents_parse_blank_comments_and_assignments) {
+    const auto doc = parseConfig("\n# note\nmax_fps=60\nname=terminal # comment\n");
+    CHECK(doc.ok());
+    CHECK(doc.entries.size() == 2);
+    CHECK(doc.entries[0].key == "max_fps");
+    CHECK(doc.entries[0].value == "60");
+    CHECK(doc.entries[1].value == "terminal");
+    CHECK(parseConfig("").entries.empty());
+    CHECK(parseConfig(" \t\n# blank\n").ok());
+}
+
 TEST_MAIN()

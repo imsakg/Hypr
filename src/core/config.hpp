@@ -132,4 +132,41 @@ inline std::vector<std::string> splitFields(const std::string& text,
     return fields;
 }
 
+struct ConfigError {
+    std::size_t line = 0;
+    std::string message;
+};
+
+struct ConfigEntry {
+    std::string category;
+    std::string key;
+    std::string value; // Raw value: no command execution or variable expansion.
+    std::size_t line = 0;
+};
+
+struct ConfigDocument {
+    std::vector<ConfigEntry> entries;
+    std::vector<ConfigError> errors;
+    bool ok() const { return errors.empty(); }
+};
+
+inline ConfigDocument parseConfig(const std::string& text) {
+    ConfigDocument document;
+    std::istringstream stream(text);
+    std::string line;
+    std::size_t lineNumber = 0;
+    while (std::getline(stream, line)) {
+        ++lineNumber;
+        line = trim(stripComment(line));
+        if (line.empty()) continue;
+        const auto equal = line.find('=');
+        if (equal == std::string::npos) {
+            document.errors.push_back({lineNumber, "expected key=value"});
+            continue;
+        }
+        document.entries.push_back({"", line.substr(0, equal), trim(line.substr(equal + 1)), lineNumber});
+    }
+    return document;
+}
+
 } // namespace HyprCore
