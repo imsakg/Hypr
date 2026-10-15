@@ -111,4 +111,22 @@ TEST(focus_always_belongs_to_the_active_workspace_and_survives_moves) {
     CHECK(state.workspace(3)->focused == 20);
     CHECK(state.activate(3) && state.focused() == 20);
 }
+TEST(closing_windows_preserves_focus_until_the_focused_member_is_removed) {
+    WorkspaceState state;
+    state.addWorkspace(1);
+    for (const auto id : {30u, 10u, 20u}) state.addWindow(1, id);
+    state.focusWindow(10);
+    CHECK(!state.removeWindow(0));
+    CHECK(!state.removeWindow(99));
+    CHECK(state.removeWindow(30));
+    CHECK(state.focused() == 10);
+    CHECK(state.removeWindow(10));
+    CHECK(state.focused() == 20);
+    CHECK(!state.workspaceOf(10));
+    CHECK(state.removeWindow(20));
+    CHECK(!state.focused());
+    CHECK(state.workspace(1)->windows.empty());
+    CHECK(state.active() == 1);
+    CHECK(!state.removeWindow(20));
+}
 TEST_MAIN()

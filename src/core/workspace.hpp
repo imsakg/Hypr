@@ -50,10 +50,14 @@ public:
         if (*from == destination) return true;
         auto& source = workspaces_.at(*from);
         target->second.windows.push_back(window);
-        source.windows.erase(std::find(source.windows.begin(), source.windows.end(), window));
-        if (source.focused == window) source.focused = source.windows.empty() ?
-            std::nullopt : std::optional<WorkspaceWindowId>{source.windows.front()};
+        detach(source, window);
         if (!target->second.focused) target->second.focused = window;
+        return true;
+    }
+    bool removeWindow(WorkspaceWindowId window) {
+        const auto home = workspaceOf(window);
+        if (!home) return false;
+        detach(workspaces_.at(*home), window);
         return true;
     }
     std::optional<WorkspaceWindowId> focused() const {
@@ -95,6 +99,11 @@ public:
         return result;
     }
 private:
+    static void detach(Workspace& source, WorkspaceWindowId window) {
+        source.windows.erase(std::find(source.windows.begin(), source.windows.end(), window));
+        if (source.focused == window) source.focused = source.windows.empty() ?
+            std::nullopt : std::optional<WorkspaceWindowId>{source.windows.front()};
+    }
     std::map<WorkspaceId, Workspace> workspaces_;
     std::optional<WorkspaceId> active_;
     std::optional<WorkspaceId> last_;
