@@ -55,4 +55,14 @@ inline std::vector<Rect> tile(Rect area, std::size_t count, LayoutOptions option
     if (options.kind==LayoutKind::Folded) return folded(area,count,options.innerGap,options.ratio,options.foldHorizontal);
     return splitAxis(area,count,options.kind != LayoutKind::Vertical,options.innerGap);
 }
+struct LayoutClient { std::uint64_t id=0; bool floating=false; bool hidden=false; bool fullscreen=false; };
+struct Placement { std::uint64_t id; Rect bounds; };
+inline std::vector<Placement> arrange(Rect area, const std::vector<LayoutClient>& clients, LayoutOptions options = {}) {
+    std::vector<std::uint64_t> ids;
+    for (const auto& client:clients) if (client.id && !client.floating && !client.hidden) ids.push_back(client.id);
+    const auto cells=tile(area,ids.size(),options);
+    std::vector<Placement> result;
+    for (std::size_t i=0;i<ids.size();++i) result.push_back({ids[i],cells[i]});
+    return result;
+}
 } // namespace HyprCore

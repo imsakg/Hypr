@@ -41,4 +41,8 @@ TEST(folded_layout_can_start_on_the_vertical_axis) {
  LayoutOptions o; o.kind=LayoutKind::Folded; o.foldHorizontal=false;
  CHECK(tile(Rect{-30,4,80,100},2,o)[0]==Rect{-30,4,80,50});
 }
+TEST(arrangements_skip_floating_and_hidden_clients) {
+ const auto cells=arrange(Rect{0,0,100,80},{{10,false,false,false},{20,true,false,false},{30,false,true,false},{40,false,false,false}});
+ CHECK(cells.size()==2); CHECK(cells[1].id==40); CHECK(cells[1].bounds.x==50);
+}
 TEST_MAIN()
