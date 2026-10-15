@@ -100,4 +100,16 @@ TEST(assignments_trim_keys_and_keep_value_syntax_and_source_lines) {
     CHECK(!parseConfig("\"not=a\"=value\n").ok());
 }
 
+TEST(categories_are_case_insensitive_and_scopes_restore) {
+    const auto doc = parseConfig("Bar {\nheight=20\n Colors{\nbg=1\n}\nenabled=1\n}\nmax_fps=60\n");
+    CHECK(doc.ok());
+    CHECK(doc.entries.size() == 4);
+    CHECK(doc.entries[0].qualifiedKey() == "bar:height");
+    CHECK(doc.entries[1].qualifiedKey() == "bar:colors:bg");
+    CHECK(doc.entries[2].qualifiedKey() == "bar:enabled");
+    CHECK(doc.entries[3].qualifiedKey() == "max_fps");
+    CHECK(doc.entries[0].category == "bar");
+    CHECK(parseConfig("value={literal}\n").entries[0].value == "{literal}");
+}
+
 TEST_MAIN()

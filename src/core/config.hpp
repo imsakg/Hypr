@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace HyprCore {
@@ -142,6 +143,7 @@ struct ConfigEntry {
     std::string key;
     std::string value; // Raw value: no command execution or variable expansion.
     std::size_t line = 0;
+    std::string qualifiedKey() const { return category.empty() ? key : category + ':' + key; }
 };
 
 struct ConfigDocument {
@@ -178,11 +180,22 @@ inline ConfigDocument parseConfig(const std::string& text) {
     std::istringstream stream(text);
     std::string line;
     std::size_t lineNumber = 0;
+    std::vector<std::pair<std::string, std::size_t>> scopes;
     while (std::getline(stream, line)) {
         ++lineNumber;
         line = trim(stripComment(line));
         if (line.empty()) continue;
         const auto equal = configFindUnquoted(line, '=');
+        if (line == "}") {
+            if (!scopes.empty()) scopes.pop_back();
+            continue;
+        }
+        if (equal == std::string::npos && line.back() == '{') {
+            const auto name = configLower(trim(line.substr(0, line.size() - 1)));
+            if (!configIdentifier(name)) document.errors.push_back({lineNumber, "invalid category"});
+            else scopes.emplace_back(name, lineNumber);
+            continue;
+        }
         if (equal == std::string::npos) {
             document.errors.push_back({lineNumber, "expected key=value"});
             continue;
@@ -192,7 +205,12 @@ inline ConfigDocument parseConfig(const std::string& text) {
             document.errors.push_back({lineNumber, "invalid or empty key"});
             continue;
         }
-        document.entries.push_back({"", key, trim(line.substr(equal + 1)), lineNumber});
+        std::string category;
+        for (const auto& scope : scopes) {
+            if (!category.empty()) category += ':';
+            category += scope.first;
+        }
+        document.entries.push_back({category, key, trim(line.substr(equal + 1)), lineNumber});
     }
     return document;
 }
