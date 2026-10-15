@@ -195,6 +195,13 @@ public:
         entries_.erase(entry);
         return true;
     }
+    // Validate a complete replacement before publishing any entry. Empty explicitly clears.
+    bool replaceAll(std::vector<Binding> bindings) {
+        BindingRegistry pending(ignored_);
+        for (auto& binding : bindings) if (!pending.set(std::move(binding))) return false;
+        entries_.swap(pending.entries_);
+        return true;
+    }
     void clear() { entries_.clear(); }
 private:
     bool sameChord(const Binding& binding, ModifierMask state, KeySym key) const {

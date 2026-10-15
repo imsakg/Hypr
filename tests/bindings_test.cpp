@@ -146,4 +146,27 @@ TEST(binding_registry_replaces_normalized_chords_and_removes_explicitly) {
     CHECK(!strict.find(ModSuper, 'q'));
     CHECK(strict.find(ModSuper | ModLock, 'q'));
 }
+TEST(binding_registry_reload_is_transactional_and_keeps_normalized_duplicate_policy) {
+    BindingRegistry registry;
+    CHECK(registry.set("SUPER,q,exec,old"));
+    CHECK(!registry.replaceAll({Binding{ModSuper, 'x', "close", ""}, Binding{ModSuper, 0, "close", ""}}));
+    CHECK(registry.entries().size() == 1);
+    CHECK(registry.find(ModSuper, 'q')->argument == "old");
+    CHECK(!registry.find(ModSuper, 'x'));
+    CHECK(!registry.replaceAll({Binding{1u << 15, 'q', "close", ""}}));
+    CHECK(!registry.replaceAll({Binding{ModSuper, 'q', "bad action", ""}}));
+    CHECK(registry.replaceAll({Binding{ModSuper, 'x', "exec", "first"},
+                               Binding{ModSuper, 'q', "close", ""},
+                               Binding{ModSuper | ModLock, 'x', "exec", "last"}}));
+    CHECK(registry.entries().size() == 2);
+    CHECK(registry.entries().front().key == static_cast<KeySym>('x'));
+    CHECK(registry.find(ModSuper | Mod2, 'x')->argument == "last");
+    CHECK(registry.replaceAll(registry.entries()));
+    CHECK(registry.find(ModSuper, 'x')->argument == "last");
+    CHECK(registry.replaceAll({}) && registry.entries().empty());
+    BindingRegistry strict(0);
+    CHECK(strict.replaceAll({Binding{ModSuper | ModLock, 'q', "close", ""}}));
+    CHECK(!strict.find(ModSuper, 'q'));
+    CHECK(strict.find(ModSuper | ModLock, 'q'));
+}
 TEST_MAIN()
