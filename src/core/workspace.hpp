@@ -19,6 +19,7 @@ struct Workspace {
     WorkspaceId id = 0;
     std::vector<WorkspaceWindowId> windows;
     std::optional<WorkspaceWindowId> focused;
+    std::vector<WorkspaceWindowId> focusHistory; // Most recently focused first.
     bool pinned = false;
 };
 
@@ -65,7 +66,7 @@ public:
         const auto it = workspaces_.find(id);
         if (!window || it == workspaces_.end() || workspaceOf(window)) return false;
         it->second.windows.push_back(window);
-        if (!it->second.focused) it->second.focused = window;
+        if (!it->second.focused) select(it->second, window);
         return true;
     }
     bool setUrgent(WorkspaceWindowId window, bool urgent) {
@@ -107,7 +108,7 @@ public:
         auto& source = workspaces_.at(*from);
         target->second.windows.push_back(window);
         detach(source, window);
-        if (!target->second.focused) target->second.focused = window;
+        if (!target->second.focused) select(target->second, window);
         return true;
     }
     bool removeWindow(WorkspaceWindowId window) {
@@ -124,8 +125,7 @@ public:
     bool focusWindow(WorkspaceWindowId window) {
         const auto home = workspaceOf(window);
         if (!home || home != active_) return false;
-        workspaces_.at(*home).focused = window;
-        urgent_.erase(window);
+        select(workspaces_.at(*home), window);
         return true;
     }
     std::optional<WorkspaceId> active() const { return active_; }
@@ -182,10 +182,20 @@ public:
         return result;
     }
 private:
-    static void detach(Workspace& source, WorkspaceWindowId window) {
+    void select(Workspace& source, WorkspaceWindowId window) {
+        auto& history = source.focusHistory;
+        history.erase(std::remove(history.begin(), history.end(), window), history.end());
+        history.insert(history.begin(), window);
+        source.focused = window;
+        if (active_ == source.id) urgent_.erase(window);
+    }
+    void detach(Workspace& source, WorkspaceWindowId window) {
         source.windows.erase(std::find(source.windows.begin(), source.windows.end(), window));
-        if (source.focused == window) source.focused = source.windows.empty() ?
-            std::nullopt : std::optional<WorkspaceWindowId>{source.windows.front()};
+        auto& history = source.focusHistory;
+        history.erase(std::remove(history.begin(), history.end(), window), history.end());
+        if (source.focused != window) return;
+        if (source.windows.empty()) source.focused.reset();
+        else select(source, history.empty() ? source.windows.front() : history.front());
     }
     std::set<WorkspaceWindowId> sticky_;
     std::set<WorkspaceWindowId> urgent_;

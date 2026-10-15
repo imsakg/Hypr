@@ -222,4 +222,27 @@ TEST(urgency_tracks_live_members_and_clears_when_the_window_receives_focus) {
     CHECK(state.removeWindow(11) && !state.isUrgent(11));
     CHECK(state.addWindow(1, 11) && !state.isUrgent(11));
 }
+TEST(workspace_focus_fallback_prefers_recent_survivors_and_prunes_departures) {
+    WorkspaceState state;
+    state.addWorkspace(1); state.addWorkspace(2);
+    for (const auto id : {10u, 20u, 30u, 40u}) state.addWindow(1, id);
+    CHECK(state.focusWindow(20));
+    CHECK(state.focusWindow(30));
+    CHECK(state.removeWindow(30));
+    CHECK(state.focused() == 20);
+    CHECK(state.focusWindow(40));
+    CHECK(state.focusWindow(20));
+    CHECK(state.setUrgent(40, true));
+    CHECK(state.moveWindow(20, 2));
+    CHECK(state.focused() == 40 && !state.isUrgent(40));
+    CHECK(state.workspace(1)->focusHistory == std::vector<WorkspaceWindowId>({40, 10}));
+    CHECK(state.workspace(2)->focusHistory == std::vector<WorkspaceWindowId>{20});
+    CHECK(state.removeWindow(10));
+    CHECK(state.workspace(1)->focusHistory == std::vector<WorkspaceWindowId>{40});
+    CHECK(state.removeWindow(40));
+    CHECK(!state.focused() && state.workspace(1)->focusHistory.empty());
+    CHECK(state.addWindow(1, 30));
+    CHECK(state.focused() == 30);
+    CHECK(state.workspace(1)->focusHistory == std::vector<WorkspaceWindowId>{30});
+}
 TEST_MAIN()
