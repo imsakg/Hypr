@@ -85,4 +85,16 @@ inline std::optional<double> parseReal(const std::string& input) {
     return value;
 }
 
+inline std::string configLower(std::string text) {
+    for (auto& c : text) if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    return text;
+}
+
+inline std::optional<bool> parseBoolean(const std::string& input) {
+    const auto text = configLower(trim(input));
+    if (text == "true" || text == "yes" || text == "on" || text == "1") return true;
+    if (text == "false" || text == "no" || text == "off" || text == "0") return false;
+    return std::nullopt;
+}
+
 } // namespace HyprCore

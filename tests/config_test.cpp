@@ -46,4 +46,10 @@ TEST(real_numbers_are_decimal_finite_and_fully_consumed) {
         CHECK(!parseReal(text));
 }
 
+TEST(booleans_use_explicit_case_insensitive_tokens) {
+    for (const auto* text : {"1", "true", "TRUE", "Yes", " on "}) CHECK(parseBoolean(text) == true);
+    for (const auto* text : {"0", "false", "FALSE", "No", " off "}) CHECK(parseBoolean(text) == false);
+    for (const auto* text : {"", "2", "-1", "truthy", "true tail", "0x1"}) CHECK(!parseBoolean(text));
+}
+
 TEST_MAIN()
