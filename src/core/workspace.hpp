@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <cstdint>
 #include <iterator>
 #include <map>
 #include <optional>
@@ -6,8 +8,11 @@
 
 namespace HyprCore {
 using WorkspaceId = int;
+using WorkspaceWindowId = std::uint64_t;
 struct Workspace {
+    explicit Workspace(WorkspaceId value = 0) : id(value) {}
     WorkspaceId id = 0;
+    std::vector<WorkspaceWindowId> windows;
 };
 
 // Values are read-only outside the state machine; rejected operations do not mutate it.
@@ -22,6 +27,19 @@ public:
     const Workspace* workspace(WorkspaceId id) const {
         const auto it = workspaces_.find(id);
         return it == workspaces_.end() ? nullptr : &it->second;
+    }
+    std::optional<WorkspaceId> workspaceOf(WorkspaceWindowId window) const {
+        for (const auto& item : workspaces_) {
+            const auto& windows = item.second.windows;
+            if (std::find(windows.begin(), windows.end(), window) != windows.end()) return item.first;
+        }
+        return std::nullopt;
+    }
+    bool addWindow(WorkspaceId id, WorkspaceWindowId window) {
+        const auto it = workspaces_.find(id);
+        if (!window || it == workspaces_.end() || workspaceOf(window)) return false;
+        it->second.windows.push_back(window);
+        return true;
     }
     std::optional<WorkspaceId> active() const { return active_; }
     std::optional<WorkspaceId> last() const { return last_; }

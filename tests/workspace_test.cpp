@@ -55,4 +55,21 @@ TEST(lastworkspace_toggles_only_successful_distinct_activations) {
     CHECK(state.toggleLast());
     CHECK(state.active() == 1 && state.last() == 4);
 }
+TEST(workspace_membership_is_ordered_and_unique_across_workspaces) {
+    WorkspaceState state;
+    state.addWorkspace(1);
+    state.addWorkspace(2);
+    CHECK(state.addWindow(1, 30));
+    CHECK(state.addWindow(1, 10));
+    CHECK(state.addWindow(1, 20));
+    CHECK(!state.addWindow(1, 10));
+    CHECK(!state.addWindow(2, 10));
+    CHECK(!state.addWindow(3, 40));
+    CHECK(!state.addWindow(1, 0));
+    CHECK(state.workspace(1)->windows == std::vector<WorkspaceWindowId>({30, 10, 20}));
+    CHECK(state.workspace(2)->windows.empty());
+    CHECK(state.workspaceOf(10) == 1);
+    CHECK(!state.workspaceOf(40));
+    CHECK(!state.workspaceOf(0));
+}
 TEST_MAIN()
