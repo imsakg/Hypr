@@ -50,4 +50,8 @@ TEST(fullscreen_ignores_tile_gaps_and_floating_state) {
  const auto cells=arrange(Rect{-10,2,100,80},{{1,false,false,false},{2,true,false,true}},o);
  CHECK(cells.size()==1); CHECK(cells[0].id==2); CHECK(cells[0].bounds==Rect{-10,2,100,80});
 }
+TEST(first_snapshot_owns_layout_eligibility) {
+ const auto cells=arrange(Rect{0,0,100,80},{{1,false,true,false},{1,false,false,true},{2,false,false,false},{2,false,false,false}});
+ CHECK(cells.size()==1); CHECK(cells[0].id==2);
+}
 TEST_MAIN()

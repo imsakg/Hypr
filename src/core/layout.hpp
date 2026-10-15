@@ -58,9 +58,13 @@ inline std::vector<Rect> tile(Rect area, std::size_t count, LayoutOptions option
 struct LayoutClient { std::uint64_t id=0; bool floating=false; bool hidden=false; bool fullscreen=false; };
 struct Placement { std::uint64_t id; Rect bounds; };
 inline std::vector<Placement> arrange(Rect area, const std::vector<LayoutClient>& clients, LayoutOptions options = {}) {
-    for (const auto& client:clients) if (client.id && !client.hidden && client.fullscreen) return {{client.id,area}};
+    std::set<std::uint64_t> seen;
     std::vector<std::uint64_t> ids;
-    for (const auto& client:clients) if (client.id && !client.floating && !client.hidden) ids.push_back(client.id);
+    for (const auto& client:clients) {
+        if (!client.id || !seen.insert(client.id).second || client.hidden) continue;
+        if (client.fullscreen) return {{client.id,area}};
+        if (!client.floating) ids.push_back(client.id);
+    }
     const auto cells=tile(area,ids.size(),options);
     std::vector<Placement> result;
     for (std::size_t i=0;i<ids.size();++i) result.push_back({ids[i],cells[i]});
