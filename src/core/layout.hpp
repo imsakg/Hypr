@@ -28,7 +28,6 @@ inline std::vector<Rect> splitAxis(Rect area, std::size_t count, bool horizontal
 }
 // Layout internals.
 inline std::vector<Rect> tile(Rect area, std::size_t count, LayoutOptions options = {}) {
-    (void)options;
-    return splitAxis(area,count,true);
+    return splitAxis(area,count,options.kind != LayoutKind::Vertical);
 }
 } // namespace HyprCore
