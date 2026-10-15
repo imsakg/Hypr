@@ -51,4 +51,16 @@ TEST(flag_actions_are_exact_and_validate_optional_booleans) {
         CHECK(!parseRuleAction(action).ok());
 }
 
+TEST(workspace_and_monitor_actions_validate_exact_bounded_ids) {
+    for (const auto* text : {"workspace 1", "workspace +2", "workspace 0x10", "workspace 2147483647", "monitor 0", "monitor +2", " monitor\t3 "})
+        CHECK(parseRuleAction(text).ok());
+    CHECK(parseRuleAction("workspace +2").action->type == RuleActionType::Workspace);
+    CHECK(parseRuleAction("workspace 0x10").action->first == 16);
+    CHECK(parseRuleAction("monitor 0").action->type == RuleActionType::Monitor);
+    CHECK(parseRuleAction("monitor +2").action->first == 2);
+    for (const auto* text : {"workspace", "workspace 0", "workspace -1", "workspace 1x", "workspace 1 2", "workspace 2147483648", "monitor", "monitor -1", "monitor 2x", "monitor 0 1", "monitor 999999999999999999", "monitorXYZ 1"})
+        CHECK(!parseRuleAction(text).ok());
+    CHECK(parseRule("workspace 2,class:term").ok());
+}
+
 TEST_MAIN()

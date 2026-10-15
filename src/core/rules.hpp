@@ -11,7 +11,7 @@ struct WindowProperties {
     std::string title;
 };
 
-enum class RuleActionType { Float, Tile, Pseudo, NoInterventions };
+enum class RuleActionType { Float, Tile, Pseudo, NoInterventions, Workspace, Monitor };
 struct RuleAction {
     RuleActionType type = RuleActionType::Float;
     int first = 0;
@@ -38,6 +38,13 @@ inline ActionParseResult parseRuleAction(const std::string& input) {
         if (words.size() > 2 || !enabled) return {std::nullopt, "flag action expects one optional boolean"};
         const auto type = words[0] == "pseudo" ? RuleActionType::Pseudo : RuleActionType::NoInterventions;
         return {RuleAction{type, 0, 0, *enabled}, ""};
+    }
+    if (!words.empty() && (words[0] == "workspace" || words[0] == "monitor")) {
+        if (words.size() != 2) return {std::nullopt, "ID action expects exactly one integer"};
+        const auto id = parseInteger(words[1]);
+        const bool workspace = words[0] == "workspace";
+        if (!id || *id < (workspace ? 1 : 0)) return {std::nullopt, "action ID is out of range"};
+        return {RuleAction{workspace ? RuleActionType::Workspace : RuleActionType::Monitor, *id, 0, true}, ""};
     }
     return {std::nullopt, "unknown or malformed rule action: " + text};
 }
