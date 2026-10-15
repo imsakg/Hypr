@@ -84,4 +84,14 @@ inline std::optional<ModifierMask> parseModifiers(std::string_view text) {
     }
     return result;
 }
+
+using KeySym = std::uint32_t;
+inline std::optional<KeySym> parseKeysym(std::string_view text) {
+    if (text.size() != 1) text = BindingDetail::trim(text);
+    if (text.size() == 1) {
+        const auto value = static_cast<unsigned char>(text.front());
+        if (value >= 32 && value <= 126) return value;
+    }
+    return std::nullopt;
+}
 }

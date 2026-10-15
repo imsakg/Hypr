@@ -44,4 +44,16 @@ TEST(passive_grab_variants_cover_each_ignored_modifier_once) {
     CHECK(custom.back() == (ModSuper | ModLock | Mod3 | Mod5));
     for (const auto mask : custom) CHECK(modifiersMatch(ModSuper, mask, ModLock | Mod3 | Mod5));
 }
+TEST(printable_ascii_keysyms_are_literal_and_never_execute_commands) {
+    for (unsigned value = 32; value <= 126; ++value) {
+        const std::string key(1, static_cast<char>(value));
+        CHECK(parseKeysym(key) == value);
+    }
+    CHECK(parseKeysym("  q  ") == static_cast<KeySym>('q'));
+    CHECK(!parseKeysym(""));
+    CHECK(!parseKeysym("ab"));
+    CHECK(!parseKeysym("$(touch sentinel)"));
+    CHECK(!parseKeysym(std::string(1, '\0')));
+    CHECK(!parseKeysym("\xC3\xA9"));
+}
 TEST_MAIN()
