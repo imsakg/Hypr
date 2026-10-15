@@ -5,6 +5,7 @@
 #include <locale>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -100,14 +101,27 @@ inline std::optional<bool> parseBoolean(const std::string& input) {
 
 inline std::vector<std::string> splitFields(const std::string& text) {
     std::vector<std::string> fields;
-    std::size_t start = 0;
+    std::string field;
+    char quote = 0;
     for (std::size_t i = 0; i < text.size(); ++i) {
-        if (text[i] == ',') {
-            fields.push_back(trim(text.substr(start, i - start)));
-            start = i + 1;
+        const char c = text[i];
+        if (c == '\\' && i + 1 < text.size()) {
+            const char next = text[i + 1];
+            if (next == ',' || next == '\\' || next == '\'' || next == '"' || next == '#') {
+                field += next;
+                ++i;
+                continue;
+            }
         }
+        if (quote) {
+            if (c == quote) quote = 0;
+            else field += c;
+        } else if (c == '\'' || c == '"') quote = c;
+        else if (c == ',') { fields.push_back(trim(field)); field.clear(); }
+        else field += c;
     }
-    fields.push_back(trim(text.substr(start)));
+    if (quote) throw std::invalid_argument("unclosed quote in fields");
+    fields.push_back(trim(field));
     return fields;
 }
 

@@ -59,4 +59,13 @@ TEST(comma_fields_keep_empty_positions) {
     CHECK(splitFields("single") == std::vector<std::string>{"single"});
 }
 
+TEST(fields_respect_quotes_and_delimiter_escapes) {
+    CHECK(splitFields(R"(a,"b,c",'d,e',f\,g)") == std::vector<std::string>({"a", "b,c", "d,e", "f,g"}));
+    CHECK(splitFields(R"("say \"hi\"",'it\'s',\d+)") == std::vector<std::string>({"say \"hi\"", "it's", R"(\d+)"}));
+    CHECK(splitFields(R"(a\\,b)") == std::vector<std::string>({R"(a\)", "b"}));
+    bool rejected = false;
+    try { (void)splitFields("a,\"unfinished"); } catch (const std::invalid_argument&) { rejected = true; }
+    CHECK(rejected);
+}
+
 TEST_MAIN()
