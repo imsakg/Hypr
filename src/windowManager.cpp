@@ -954,6 +954,8 @@ void CWindowManager::setEffectiveSizePosUsingConfig(CWindow* pWindow) {
         }
     }
 
+    TEMPEFFECTIVESIZE.x=std::max(1.0,TEMPEFFECTIVESIZE.x);
+    TEMPEFFECTIVESIZE.y=std::max(1.0,TEMPEFFECTIVESIZE.y);
     pWindow->setEffectivePosition(TEMPEFFECTIVEPOS);
     pWindow->setEffectiveSize(TEMPEFFECTIVESIZE);
 }

@@ -238,6 +238,7 @@ void CStatusBar::setupTray() {
         return;
     }
 
+    const auto trayAtom=TRAYREPLY->atom;
     free(SELREPLY);
     free(TRAYREPLY);
 
@@ -251,7 +252,7 @@ void CStatusBar::setupTray() {
     event->type = HYPRATOMS["MANAGER"];
     event->format = 32;
     event->data.data32[0] = 0L;
-    event->data.data32[1] = TRAYREPLY->atom;
+    event->data.data32[1] = trayAtom;
     event->data.data32[2] = trayWindowID;
 
     xcb_send_event(g_pWindowManager->DisplayConnection, 0, g_pWindowManager->Screen->root, 0xFFFFFF, (char*)buf);

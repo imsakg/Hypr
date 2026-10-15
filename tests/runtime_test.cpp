@@ -67,4 +67,17 @@ TEST(preflight_is_passive_even_when_exec_directives_are_present) {
  CHECK(validateRuntimeConfig("exec=touch /never-executed\nexec-once=printf 'hello#world'\n").empty());
  CHECK(!validateRuntimeConfig("exec=\n").empty());
 }
+TEST(layout_and_resize_contracts_hold_across_repeated_workspace_changes) {
+ WorkspaceState state; state.addWorkspace(1); state.addWorkspace(2); state.addWindow(1,10); state.addWindow(1,20);
+ for (int i=0;i<100;++i) {
+  CHECK(state.moveWindow(20,2)); CHECK(state.activate(2)); CHECK(state.focusWindow(20));
+  CHECK(state.moveWindow(20,1)); CHECK(state.activate(1)); CHECK(state.focusWindow(10));
+  CHECK(state.workspace(1)->windows.size()==2); CHECK(state.workspace(2)->windows.empty());
+ }
+ for (int width=1;width<30;++width) for (int count=1;count<10;++count) {
+  const auto cells=tile(Rect{-20,0,width,20},count);
+  int total=0; for (const auto& cell:cells) { CHECK(cell.width>=0); total+=cell.width; }
+  CHECK(total==width);
+ }
+}
 TEST_MAIN()
