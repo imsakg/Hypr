@@ -1,4 +1,5 @@
 #include "KeybindManager.hpp"
+#include "core/runtime.hpp"
 #include "utilities/Util.hpp"
 #include "events/events.hpp"
 #include "windowManager.hpp"
@@ -16,69 +17,11 @@ Keybind* KeybindManager::findKeybindByKey(int mod, xcb_keysym_t keysym) {
 }
 
 uint32_t KeybindManager::getKeyCodeFromName(std::string name) {
-    if (name == "")
-        return 0;
-
-    const auto ORIGINALCASENAME = name;
-    transform(name.begin(), name.end(), name.begin(), ::tolower);
-
-    if (name.length() == 1) {
-        // key
-        std::string command = "xmodmap -pk | grep \"(" + name + ")\"";
-        std::string returnValue = exec(command.c_str());
-
-        try {
-            returnValue = returnValue.substr(returnValue.find_first_of('x') + 1);
-            returnValue = returnValue.substr(0, returnValue.find_first_of(' '));
-
-            return std::stoi(returnValue, nullptr, 16); // return hex to int
-        } catch(...) { }
-    } else {
-        if (name == "return" || name == "enter") {
-            return 0xff0d;
-        } else if (name == "left") {
-            return 0xff51;
-        } else if (name == "right") {
-            return 0xff53;
-        } else if (name == "up") {
-            return 0xff52;
-        } else if (name == "down") {
-            return 0xff54;
-        } else if (name == "space") {
-            return 0x20;
-        } else {
-            // unknown key, find in the xmodmap
-            std::string command = "xmodmap -pk | grep \"(" + ORIGINALCASENAME + ")\"";
-            std::string returnValue = exec(command.c_str());
-
-            try {
-                returnValue = returnValue.substr(returnValue.find_first_of('x') + 1);
-                returnValue = returnValue.substr(0, returnValue.find_first_of(' '));
-
-                return std::stoi(returnValue, nullptr, 16);  // return hex to int
-            } catch (...) {
-                Debug::log(ERR, "Unknown key: " + ORIGINALCASENAME);
-            }
-        }
-    }
-
-    return 0;
+    return HyprCore::runtimeKeysym(name).value_or(0);
 }
 
 unsigned int KeybindManager::modToMask(std::string mod) {
-
-    unsigned int sum = 0;
-
-    if (CONTAINS(mod, "SUPER") || CONTAINS(mod, "MOD4"))    sum |= XCB_MOD_MASK_4;
-    if (CONTAINS(mod, "SHIFT"))                             sum |= XCB_MOD_MASK_SHIFT;
-    if (CONTAINS(mod, "CTRL"))                              sum |= XCB_MOD_MASK_CONTROL;
-    if (CONTAINS(mod, "ALT") || CONTAINS(mod, "MOD1"))      sum |= XCB_MOD_MASK_1;
-    if (CONTAINS(mod, "MOD2"))                              sum |= XCB_MOD_MASK_2;
-    if (CONTAINS(mod, "MOD3"))                              sum |= XCB_MOD_MASK_3;
-    if (CONTAINS(mod, "MOD5"))                              sum |= XCB_MOD_MASK_5;
-    if (CONTAINS(mod, "LOCK"))                              sum |= XCB_MOD_MASK_LOCK;
-
-    return sum;
+    return HyprCore::runtimeModifiers(mod).value_or(0);
 }
 
 xcb_keysym_t KeybindManager::getKeysymFromKeycode(xcb_keycode_t keycode) {

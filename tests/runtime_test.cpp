@@ -22,4 +22,10 @@ TEST(runtime_config_handles_blank_lines_quotes_and_partial_numbers) {
  CHECK(doc.ok()); CHECK(doc.entries.size()==1); CHECK(doc.entries[0].value=="printf '#ok'");
  CHECK(!parseReal("nan")); CHECK(!parseInteger("20px"));
 }
+TEST(runtime_key_adapters_preserve_old_configs_without_accepting_garbage) {
+ CHECK(runtimeModifiers("SUPERSHIFT")==runtimeModifiers("SUPER SHIFT"));
+ CHECK(!runtimeModifiers("NOTSUPER")); CHECK(!runtimeModifiers("SUPERCTRLJUNK"));
+ CHECK(runtimeKeysym("Q")==static_cast<KeySym>('q')); CHECK(runtimeKeysym("equals")==static_cast<KeySym>('='));
+ CHECK(!runtimeKeysym("$(touch /tmp/bad)"));
+}
 TEST_MAIN()

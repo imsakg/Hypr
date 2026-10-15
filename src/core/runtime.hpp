@@ -8,4 +8,28 @@
 #include "workspace.hpp"
 namespace HyprCore {
 inline bool flatLayout(int id) { return id>=2 && id<=4; }
+// Keep old concatenated uppercase modifier spellings only when every token is known.
+inline std::optional<ModifierMask> runtimeModifiers(std::string_view text) {
+    if (auto parsed=parseModifiers(text)) return parsed;
+    text=BindingDetail::trim(text);
+    ModifierMask mask=0;
+    while (!text.empty()) {
+        bool found=false;
+        for (const auto token:{"CONTROL","SUPER","SHIFT","CTRL","MOD1","MOD2","MOD3","MOD4","MOD5","LOCK","ALT"}) {
+            const std::string_view name(token);
+            if (text.substr(0,name.size())!=name) continue;
+            const auto bit=BindingDetail::modifier(name);
+            if (!bit || (mask & *bit)) return std::nullopt;
+            mask|=*bit; text.remove_prefix(name.size()); found=true; break;
+        }
+        if (!found) return std::nullopt;
+    }
+    return mask;
+}
+inline std::optional<KeySym> runtimeKeysym(std::string name) {
+    name=trim(name);
+    if (name.size()==1 && name[0]>='A' && name[0]<='Z') name[0]+=32;
+    if (configLower(name)=="equals") name="equal";
+    return parseKeysym(name);
+}
 } // namespace HyprCore

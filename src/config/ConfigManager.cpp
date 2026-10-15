@@ -102,21 +102,14 @@ void configSetValueSafe(const std::string& COMMAND, const std::string& VALUE) {
 
 void handleBind(const std::string& command, const std::string& value) {
 
-    // example:
-    // bind=SUPER,G,exec,dmenu_run <args>
-
-    auto valueCopy = value;
-
-    const auto MOD = valueCopy.substr(0, valueCopy.find_first_of(","));
-    valueCopy = valueCopy.substr(valueCopy.find_first_of(",") + 1);
-
-    const auto KEY = KeybindManager::getKeyCodeFromName(valueCopy.substr(0, valueCopy.find_first_of(",")));
-    valueCopy = valueCopy.substr(valueCopy.find_first_of(",") + 1);
-
-    const auto HANDLER = valueCopy.substr(0, valueCopy.find_first_of(","));
-    valueCopy = valueCopy.substr(valueCopy.find_first_of(",") + 1);
-
-    const auto COMMAND = valueCopy;
+    const auto parsed=HyprCore::parseConfigBinding(value);
+    if (!parsed.ok()) { ConfigManager::parseError=parsed.error; return; }
+    const auto& record=*parsed.binding;
+    const auto mask=HyprCore::runtimeModifiers(record.modifiers);
+    const auto KEY=KeybindManager::getKeyCodeFromName(record.key);
+    if (!mask || !KEY) { ConfigManager::parseError="Invalid binding modifier or key"; return; }
+    const auto HANDLER=record.dispatcher;
+    const auto COMMAND=record.argument;
 
     Dispatcher dispatcher = nullptr;
     if (HANDLER == "exec") dispatcher = KeybindManager::call;
@@ -132,7 +125,11 @@ void handleBind(const std::string& command, const std::string& value) {
     if (HANDLER == "pseudo") dispatcher = KeybindManager::togglePseudoActive;
 
     if (dispatcher && KEY != 0)
-        KeybindManager::keybinds.push_back(Keybind(KeybindManager::modToMask(MOD), KEY, COMMAND, dispatcher));
+        {
+            auto& bindings=KeybindManager::keybinds;
+            bindings.erase(std::remove_if(bindings.begin(),bindings.end(),[&](Keybind& key){return key.getMod()==*mask && key.getKeysym()==KEY;}),bindings.end());
+            bindings.push_back(Keybind(*mask,KEY,COMMAND,dispatcher));
+        }
 }
 
 void handleRawExec(const std::string& command, const std::string& args) {
