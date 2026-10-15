@@ -33,4 +33,9 @@ TEST(live_chords_ignore_lock_bits_but_not_extra_shortcut_modifiers) {
  CHECK(modifiersMatch(super,super|ModLock|Mod2)); CHECK(!modifiersMatch(super,super|ModShift));
  CHECK(grabVariants(super).size()==4);
 }
+TEST(runtime_rule_compilation_never_applies_broken_regexes) {
+ CHECK(!parseRule("float,class:[").ok());
+ const auto rule=parseRule("float,class:^Term$ && !title:^Secret$"); CHECK(rule.ok());
+ CHECK(rule.rule->matches({"Term","","Public"})); CHECK(!rule.rule->matches({"Term","","Secret"}));
+}
 TEST_MAIN()

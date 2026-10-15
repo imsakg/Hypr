@@ -228,28 +228,11 @@ void parseModule(const std::string& COMMANDC, const std::string& VALUE) {
 }
 
 void handleWindowRule(const std::string& command, const std::string& value) {
-    const auto RULE = value.substr(0, value.find_first_of(","));
-    const auto VALUE = value.substr(value.find_first_of(",") + 1);
-
-    // check rule and value
-    if (RULE == "" || VALUE == "") {
-        return;
-    }
-
-    // verify we support a rule
-    if (RULE != "float" 
-        && RULE != "tile"
-        && RULE.find("move") != 0
-        && RULE.find("size") != 0
-        && RULE.find("nointerventions") != 0
-        && RULE.find("pseudo") != 0
-        && RULE.find("monitor") != 0) {
-            Debug::log(ERR, "Invalid rule found: " + RULE);
-            ConfigManager::parseError = "Invalid rule found: " + RULE;
-            return;
-        }
-
-    ConfigManager::windowRules.push_back({RULE, VALUE});
+    (void)command;
+    const auto parsed=HyprCore::parseRule(value);
+    if (!parsed.ok()) { ConfigManager::parseError=parsed.error; return; }
+    const auto comma=value.find(',');
+    ConfigManager::windowRules.push_back({HyprCore::trim(value.substr(0,comma)),HyprCore::trim(value.substr(comma+1)),*parsed.rule});
 }
 
 void parseLine(std::string& line) {
@@ -469,42 +452,10 @@ std::string ConfigManager::getString(std::string v) {
 }
 
 std::vector<SWindowRule> ConfigManager::getMatchingRules(xcb_window_t w) {
-    const auto PWINDOW = g_pWindowManager->getWindowFromDrawable(w);
-
-    if (!PWINDOW)
-        return std::vector<SWindowRule>();
-
-    std::vector<SWindowRule> returns;
-
-    for (auto& rule : ConfigManager::windowRules) {
-        // check if we have a matching rule
-        if (rule.szValue.find("class:") == 0) {
-            try {
-                std::regex classCheck(rule.szValue.substr(strlen("class:")));
-
-                if (!std::regex_search(PWINDOW->getClassName(), classCheck))
-                    continue;
-            } catch (...) {
-                Debug::log(ERR, "Regex error at " + rule.szValue);
-            }
-        } else if (rule.szValue.find("role:") == 0) {
-            try {
-                std::regex roleCheck(rule.szValue.substr(strlen("role:")));
-
-                if (!std::regex_search(PWINDOW->getRoleName(), roleCheck))
-                    continue;
-            } catch (...) {
-                Debug::log(ERR, "Regex error at " + rule.szValue);
-            }
-        } else {
-            continue;
-        }
-
-        // applies. Read the rule and behave accordingly
-        Debug::log(LOG, "Window rule " + rule.szRule + "," + rule.szValue + " matched.");
-
-        returns.push_back(rule);
-    }
-
-    return returns;
+    const auto window=g_pWindowManager->getWindowFromDrawable(w);
+    if (!window) return {};
+    const HyprCore::WindowProperties properties{window->getClassName(),window->getRoleName(),window->getName()};
+    std::vector<SWindowRule> matched;
+    for (const auto& rule:windowRules) if (rule.compiled && rule.compiled->matches(properties)) matched.push_back(rule);
+    return matched;
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "../core/rules.hpp"
 
 #include <map>
 #include "../utilities/Debug.hpp"
@@ -23,6 +24,7 @@ struct SConfigValue {
 struct SWindowRule {
     std::string szRule;
     std::string szValue;
+    std::optional<HyprCore::Rule> compiled;
 };
 
 namespace ConfigManager {
