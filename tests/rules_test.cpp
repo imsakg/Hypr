@@ -94,4 +94,18 @@ TEST(compound_selectors_require_every_condition_and_keep_regex_commas) {
         CHECK(!parseRule(text).ok());
 }
 
+TEST(negated_selectors_invert_only_successfully_compiled_regex_matches) {
+    const auto rule = parseRule("float,class:^browser$ && !role:^normal$ && !title:^Secret");
+    CHECK(rule.ok());
+    CHECK(rule.rule->matches({"browser", "dialog", "Save"}));
+    CHECK(!rule.rule->matches({"browser", "normal", "Save"}));
+    CHECK(!rule.rule->matches({"browser", "dialog", "Secret note"}));
+    CHECK(!rule.rule->matches({"other", "dialog", "Save"}));
+    CHECK(parseRule("tile,!class:^browser$").rule->matches({"term", "", ""}));
+    CHECK(!parseRule("tile,!title:^$").rule->matches({"", "", ""}));
+    CHECK(parseRule("tile,title:^!literal$").rule->matches({"", "", "!literal"}));
+    for (const auto* text : {"float,!class:", "float,!title:[", "float,!!class:.*", "float,!:.*", "float,!other:.*"})
+        CHECK(!parseRule(text).ok());
+}
+
 TEST_MAIN()

@@ -79,7 +79,8 @@ public:
             if (condition.target == RuleTarget::Role) property = &window.role;
             else if (condition.target == RuleTarget::Title) property = &window.title;
             try {
-                if (!std::regex_search(*property, condition.expression)) return false;
+                const bool matched = std::regex_search(*property, condition.expression);
+                if (matched == condition.negated) return false;
             } catch (const std::regex_error&) {
                 return false;
             }
@@ -126,7 +127,9 @@ inline RuleParseResult parseRule(const std::string& input, std::size_t line = 0)
         const auto condition = trim(selectors.substr(first, separator == std::string::npos ? separator : separator - first));
         const auto colon = condition.find(':');
         if (colon == std::string::npos) return {std::nullopt, "expected target:regex condition"};
-        const auto targetName = condition.substr(0, colon);
+        auto targetName = condition.substr(0, colon);
+        const bool negated = !targetName.empty() && targetName[0] == '!';
+        if (negated) targetName.erase(0, 1);
         RuleTarget target = RuleTarget::Class;
         if (targetName == "role") target = RuleTarget::Role;
         else if (targetName == "title") target = RuleTarget::Title;
@@ -134,7 +137,7 @@ inline RuleParseResult parseRule(const std::string& input, std::size_t line = 0)
         const auto pattern = trim(condition.substr(colon + 1));
         if (pattern.empty()) return {std::nullopt, "rule regex must not be empty"};
         try {
-            rule.conditions_.push_back({target, pattern, std::regex(pattern, std::regex::ECMAScript | std::regex::optimize), false});
+            rule.conditions_.push_back({target, pattern, std::regex(pattern, std::regex::ECMAScript | std::regex::optimize), negated});
         } catch (const std::regex_error& error) {
             return {std::nullopt, std::string("invalid regex: ") + error.what()};
         }
