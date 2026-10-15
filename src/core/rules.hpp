@@ -31,7 +31,7 @@ inline ActionParseResult parseRuleAction(const std::string& input) {
     return {std::nullopt, "unknown or malformed rule action: " + text};
 }
 
-enum class RuleTarget { Class };
+enum class RuleTarget { Class, Role, Title };
 struct RuleCondition {
     RuleTarget target = RuleTarget::Class;
     std::string pattern;
@@ -48,7 +48,10 @@ public:
     bool matches(const WindowProperties& window) const {
         if (conditions_.empty()) return false;
         for (const auto& condition : conditions_) {
-            if (!std::regex_search(window.className, condition.expression)) return false;
+            const std::string* property = &window.className;
+            if (condition.target == RuleTarget::Role) property = &window.role;
+            else if (condition.target == RuleTarget::Title) property = &window.title;
+            if (!std::regex_search(*property, condition.expression)) return false;
         }
         return true;
     }
@@ -71,13 +74,19 @@ inline RuleParseResult parseRule(const std::string& input, std::size_t line = 0)
     const auto action = parseRuleAction(input.substr(0, comma));
     if (!action.ok()) return {std::nullopt, action.error};
     const auto condition = trim(input.substr(comma + 1));
-    if (condition.compare(0, 6, "class:") != 0) return {std::nullopt, "expected class:regex condition"};
-    const auto pattern = condition.substr(6);
+    const auto colon = condition.find(':');
+    const auto targetName = condition.substr(0, colon);
+    RuleTarget target = RuleTarget::Class;
+    if (targetName == "role") target = RuleTarget::Role;
+    else if (targetName == "title") target = RuleTarget::Title;
+    else if (targetName != "class") return {std::nullopt, "unknown rule target: " + targetName};
+    if (colon == std::string::npos) return {std::nullopt, "expected target:regex condition"};
+    const auto pattern = condition.substr(colon + 1);
     Rule rule;
     rule.action_ = *action.action;
     rule.line_ = line;
     try {
-        rule.conditions_.push_back({RuleTarget::Class, pattern, std::regex(pattern), false});
+        rule.conditions_.push_back({target, pattern, std::regex(pattern), false});
     } catch (const std::regex_error& error) {
         return {std::nullopt, std::string("invalid regex: ") + error.what()};
     }
