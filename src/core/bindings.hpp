@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace HyprCore {
@@ -160,4 +161,46 @@ inline std::optional<Binding> parseBinding(std::string_view text) {
     if (!modifiers || !key || !BindingDetail::actionName(action)) return std::nullopt;
     return Binding{*modifiers, *key, std::string(action), std::string(argument)};
 }
+
+class BindingRegistry {
+public:
+    explicit BindingRegistry(ModifierMask ignored = DefaultIgnoredModifiers)
+        : ignored_(ignored & KeyboardModifiers) {}
+    const std::vector<Binding>& entries() const { return entries_; }
+    bool set(Binding binding) {
+        if (!binding.key || (binding.modifiers & ~KeyboardModifiers) || !BindingDetail::actionName(binding.action))
+            return false;
+        binding.modifiers = normalizeModifiers(binding.modifiers, ignored_);
+        for (auto& entry : entries_) {
+            if (sameChord(entry, binding.modifiers, binding.key)) {
+                entry = std::move(binding);
+                return true;
+            }
+        }
+        entries_.push_back(std::move(binding));
+        return true;
+    }
+    bool set(std::string_view text) {
+        auto binding = parseBinding(text);
+        return binding && set(std::move(*binding));
+    }
+    const Binding* find(ModifierMask state, KeySym key) const {
+        for (const auto& entry : entries_) if (sameChord(entry, state, key)) return &entry;
+        return nullptr;
+    }
+    bool remove(ModifierMask modifiers, KeySym key) {
+        const auto entry = std::find_if(entries_.begin(), entries_.end(),
+            [&](const Binding& binding) { return sameChord(binding, modifiers, key); });
+        if (entry == entries_.end()) return false;
+        entries_.erase(entry);
+        return true;
+    }
+    void clear() { entries_.clear(); }
+private:
+    bool sameChord(const Binding& binding, ModifierMask state, KeySym key) const {
+        return binding.key == key && modifiersMatch(binding.modifiers, state, ignored_);
+    }
+    ModifierMask ignored_;
+    std::vector<Binding> entries_;
+};
 }

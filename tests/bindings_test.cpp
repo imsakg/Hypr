@@ -123,4 +123,27 @@ TEST(action_arguments_preserve_commas_quotes_and_comment_characters) {
     CHECK(parseBinding("SUPER,q,exec,,leading,tail")->argument == ",leading,tail");
     CHECK(!parseBinding("SUPER,q,,argument"));
 }
+TEST(binding_registry_replaces_normalized_chords_and_removes_explicitly) {
+    BindingRegistry registry;
+    CHECK(registry.set("SUPER,q,exec,first"));
+    CHECK(registry.set("SUPER,Return,close"));
+    CHECK(registry.set("MOD4 LOCK MOD2,q,exec,replacement"));
+    CHECK(registry.entries().size() == 2);
+    const auto* hit = registry.find(ModSuper | Mod2, static_cast<KeySym>('q'));
+    CHECK(hit && hit->argument == "replacement");
+    CHECK(registry.entries().front().key == static_cast<KeySym>('q'));
+    CHECK(!registry.find(ModSuper | ModShift, static_cast<KeySym>('q')));
+    CHECK(!registry.set("SUPER,q,,bad"));
+    CHECK(!registry.set(Binding{ModSuper, 0, "exec", "bad"}));
+    CHECK(!registry.set(Binding{1u << 20, 'x', "exec", "bad"}));
+    CHECK(registry.entries().size() == 2);
+    CHECK(registry.remove(ModSuper | ModLock, static_cast<KeySym>('q')));
+    CHECK(!registry.remove(ModSuper, static_cast<KeySym>('q')));
+    registry.clear();
+    CHECK(registry.entries().empty());
+    BindingRegistry strict(0);
+    CHECK(strict.set("SUPER LOCK,q,close"));
+    CHECK(!strict.find(ModSuper, 'q'));
+    CHECK(strict.find(ModSuper | ModLock, 'q'));
+}
 TEST_MAIN()
