@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.hpp"
+#include <algorithm>
 #include <regex>
 
 namespace HyprCore {
@@ -201,5 +202,37 @@ inline RuleSet parseRules(const ConfigDocument& document) {
     if (!result.ok()) result.rules.clear();
     return result;
 }
+
+struct RuleConfigSnapshot {
+    ConfigDocument document;
+    ConfigBindingList bindings;
+    RuleSet rules;
+};
+
+// Validation transaction only; callers provide synchronization and apply X11 state.
+class RuleConfigStore {
+public:
+    bool load(const std::string& text) {
+        RuleConfigSnapshot candidate;
+        candidate.document = parseConfig(text);
+        errors_ = candidate.document.errors;
+        if (!candidate.document.ok()) return false;
+        candidate.bindings = parseConfigBindings(candidate.document);
+        candidate.rules = parseRules(candidate.document);
+        errors_ = candidate.bindings.errors;
+        errors_.insert(errors_.end(), candidate.rules.errors.begin(), candidate.rules.errors.end());
+        std::stable_sort(errors_.begin(), errors_.end(), [](const ConfigError& left, const ConfigError& right) {
+            return left.line < right.line;
+        });
+        if (!errors_.empty()) return false;
+        snapshot_ = std::move(candidate);
+        return true;
+    }
+    const RuleConfigSnapshot& snapshot() const { return snapshot_; }
+    const std::vector<ConfigError>& errors() const { return errors_; }
+private:
+    RuleConfigSnapshot snapshot_;
+    std::vector<ConfigError> errors_;
+};
 
 } // namespace HyprCore

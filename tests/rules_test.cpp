@@ -160,4 +160,38 @@ TEST(rule_resolution_is_last_match_wins_per_independent_property) {
     CHECK(!parseRules(parseConfig("windowrule=float,class:[\n")).resolve({"term", "", ""}).floating);
 }
 
+TEST(config_rule_store_reloads_document_bindings_and_rules_as_one_snapshot) {
+    RuleConfigStore store;
+    CHECK(store.snapshot().document.entries.empty());
+    CHECK(store.errors().empty());
+    CHECK(store.load("count=3\nbind=,F1,exec,old command\nwindowrule=float,class:term\n"));
+    CHECK(store.snapshot().document.integer("count") == 3);
+    CHECK(store.snapshot().bindings.bindings[0].argument == "old command");
+    CHECK(store.snapshot().rules.resolve({"term", "", ""}).floating == true);
+    CHECK(!store.load("count=9\nbind=,F1,bogus,\nwindowrule=tile,class:[\n"));
+    CHECK(store.errors().size() == 2);
+    CHECK(store.errors()[0].line == 2);
+    CHECK(store.errors()[1].line == 3);
+    CHECK(store.snapshot().document.integer("count") == 3);
+    CHECK(store.snapshot().bindings.bindings[0].argument == "old command");
+    CHECK(store.snapshot().rules.resolve({"term", "", ""}).floating == true);
+    CHECK(!store.load("count=10\nbar {\n"));
+    CHECK(store.errors().size() == 1);
+    CHECK(store.errors()[0].line == 2);
+    CHECK(store.snapshot().document.integer("count") == 3);
+    CHECK(!store.load("windowrule=tile,class:[\nbind=,F1,bogus,\n"));
+    CHECK(store.errors()[0].line == 1);
+    CHECK(store.errors()[1].line == 2);
+    CHECK(store.load("count=4\nwindowrule=tile,class:term\n"));
+    CHECK(store.errors().empty());
+    CHECK(store.snapshot().document.integer("count") == 4);
+    CHECK(store.snapshot().bindings.bindings.empty());
+    CHECK(store.snapshot().rules.resolve({"term", "", ""}).floating == false);
+    CHECK(store.load(""));
+    CHECK(store.snapshot().document.entries.empty());
+    CHECK(store.snapshot().rules.rules.empty());
+    CHECK(store.snapshot().bindings.bindings.empty());
+    CHECK(store.errors().empty());
+}
+
 TEST_MAIN()
