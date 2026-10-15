@@ -1,4 +1,5 @@
 #include "ConfigManager.hpp"
+#include "../core/runtime.hpp"
 #include "../windowManager.hpp"
 #include "../KeybindManager.hpp"
 
@@ -24,6 +25,10 @@ void ConfigManager::init() {
 
     configValues["layout"].intValue = LAYOUT_DWINDLE;
     configValues["layout:no_gaps_when_only"].intValue = 0;
+    configValues["layout:fold_ratio"].floatValue = 0.5f;
+    configValues["layout:fold_horizontal"].intValue = 1;
+    configValues["layout:reverse"].intValue = 0;
+    configValues["focus_wrap"].intValue = 0;
 
     configValues["max_fps"].intValue = 60;
 
@@ -67,6 +72,12 @@ void configSetValueSafe(const std::string& COMMAND, const std::string& VALUE) {
     }
 
     auto& CONFIGENTRY = ConfigManager::configValues.at(COMMAND);
+    if (COMMAND == "layout") {
+        const auto id = HyprCore::parseLayoutId(HyprCore::trim(VALUE));
+        if (!id) ConfigManager::parseError = "Unknown layout: " + VALUE;
+        else CONFIGENTRY.intValue = *id;
+        return;
+    }
     if (CONFIGENTRY.intValue != -1) {
         try {
             if (VALUE.find("0x") == 0) {
@@ -396,7 +407,7 @@ void ConfigManager::loadConfigLoadVars() {
     }
 
     // Ensure correct layout
-    if (configValues["layout"].intValue < 0 || configValues["layout"].intValue > 1) {
+    if (configValues["layout"].intValue < 0 || configValues["layout"].intValue > LAYOUT_FOLDED) {
         Debug::log(ERR, "Invalid layout ID, falling back to 0.");
         configValues["layout"].intValue = 0;
     }

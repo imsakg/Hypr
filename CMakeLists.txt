@@ -33,7 +33,7 @@ add_executable(Hypr ${SRCFILES})
 IF(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES DEBUG)
     message(STATUS "Configuring Hypr in Debug with CMake!")
 ELSE()
-    add_compile_options(-Ofast)
+    add_compile_options(-O2) # Preserve finite-number validation in policy code.
     message(STATUS "Configuring Hypr in Release with CMake!")
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES DEBUG)
 

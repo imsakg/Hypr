@@ -8,7 +8,10 @@
 
 enum ELayouts {
     LAYOUT_DWINDLE = 0,
-    LAYOUT_MASTER
+    LAYOUT_MASTER,
+    LAYOUT_HORIZONTAL,
+    LAYOUT_VERTICAL,
+    LAYOUT_FOLDED
 };
 
 struct SConfigValue {
