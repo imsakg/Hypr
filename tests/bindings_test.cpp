@@ -34,4 +34,14 @@ TEST(matching_ignores_locks_and_pointer_button_state) {
     CHECK(!modifiersMatch(ModSuper, ModSuper | Mod2, ModLock));
     CHECK(normalizeModifiers(ModSuper | Mod3, ModLock | Mod3) == ModSuper);
 }
+TEST(passive_grab_variants_cover_each_ignored_modifier_once) {
+    const std::vector<ModifierMask> expected{ModSuper, ModSuper | ModLock, ModSuper | Mod2, ModSuper | ModLock | Mod2};
+    CHECK(grabVariants(ModSuper | ModLock) == expected);
+    CHECK(grabVariants(ModShift, 0) == std::vector<ModifierMask>{ModShift});
+    const auto custom = grabVariants(ModSuper, ModLock | Mod3 | Mod5 | (1u << 15));
+    CHECK(custom.size() == 8);
+    CHECK(custom.front() == ModSuper);
+    CHECK(custom.back() == (ModSuper | ModLock | Mod3 | Mod5));
+    for (const auto mask : custom) CHECK(modifiersMatch(ModSuper, mask, ModLock | Mod3 | Mod5));
+}
 TEST_MAIN()

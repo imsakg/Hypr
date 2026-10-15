@@ -1,8 +1,10 @@
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace HyprCore {
 using ModifierMask = std::uint32_t;
@@ -23,6 +25,19 @@ inline ModifierMask normalizeModifiers(ModifierMask state, ModifierMask ignored 
 inline bool modifiersMatch(ModifierMask binding, ModifierMask state,
                            ModifierMask ignored = DefaultIgnoredModifiers) {
     return normalizeModifiers(binding, ignored) == normalizeModifiers(state, ignored);
+}
+
+inline std::vector<ModifierMask> grabVariants(ModifierMask binding,
+                                             ModifierMask ignored = DefaultIgnoredModifiers) {
+    std::vector<ModifierMask> masks{normalizeModifiers(binding, ignored)};
+    ignored &= KeyboardModifiers;
+    for (ModifierMask bit = 1; bit <= Mod5; bit <<= 1) {
+        if (!(ignored & bit)) continue;
+        const auto count = masks.size();
+        for (std::size_t i = 0; i < count; ++i) masks.push_back(masks[i] | bit);
+    }
+    std::sort(masks.begin(), masks.end());
+    return masks;
 }
 
 namespace BindingDetail {
