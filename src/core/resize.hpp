@@ -31,4 +31,13 @@ inline Rect resizeEdges(Rect r,int dx,int dy,bool left,bool top,SizeHints hints 
     if (top) r.y=saturatedInt(static_cast<long long>(old.y)+old.height-r.height);
     return r;
 }
+inline Rect fitInside(Rect r,Rect area) {
+    r.width=std::clamp(r.width,0,std::max(0,area.width));
+    r.height=std::clamp(r.height,0,std::max(0,area.height));
+    const auto maxX=static_cast<long long>(area.x)+std::max(0,area.width)-r.width;
+    const auto maxY=static_cast<long long>(area.y)+std::max(0,area.height)-r.height;
+    r.x=saturatedInt(std::clamp(static_cast<long long>(r.x),static_cast<long long>(area.x),maxX));
+    r.y=saturatedInt(std::clamp(static_cast<long long>(r.y),static_cast<long long>(area.y),maxY));
+    return r;
+}
 } // namespace HyprCore

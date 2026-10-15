@@ -23,4 +23,8 @@ TEST(edge_resizing_keeps_right_and_bottom_anchored) {
  SizeHints h; h.minWidth=40;
  CHECK(resizeEdges(Rect{10,20,80,60},100,0,true,false,h)==Rect{50,20,40,60});
 }
+TEST(floating_bounds_support_monitors_left_of_the_origin) {
+ CHECK(fitInside(Rect{-300,-20,300,100},Rect{-100,0,100,80})==Rect{-100,0,100,80});
+ CHECK(fitInside(Rect{500,90,30,20},Rect{0,0,100,80})==Rect{70,60,30,20});
+}
 TEST_MAIN()
