@@ -79,4 +79,19 @@ TEST(move_accepts_signed_coordinates_and_size_requires_positive_dimensions) {
         CHECK(!parseRuleAction(text).ok());
 }
 
+TEST(compound_selectors_require_every_condition_and_keep_regex_commas) {
+    const auto both = parseRule("float,class:^browser$ && role:^pop-up$ && title:Save");
+    CHECK(both.ok());
+    CHECK(both.rule->matches({"browser", "pop-up", "Save document"}));
+    CHECK(!both.rule->matches({"browser", "normal", "Save document"}));
+    CHECK(!both.rule->matches({"other", "pop-up", "Save document"}));
+    CHECK(!both.rule->matches({"browser", "pop-up", "Open document"}));
+    const auto commas = parseRule(R"(float,class:^x{1,3},term$ && title:^A&&B$)");
+    CHECK(commas.ok());
+    CHECK(commas.rule->matches({"xx,term", "", "A&&B"}));
+    CHECK(parseRule("float,class:term\t&&\trole:dialog").rule->matches({"term", "dialog", ""}));
+    for (const auto* text : {"float,class:.* &&", "float,&& class:.*", "float,class:.* && && title:.*", "float,class:.* && title:", "float,class:.* && unknown:.*", "float,class:.* && role:["})
+        CHECK(!parseRule(text).ok());
+}
+
 TEST_MAIN()

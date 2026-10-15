@@ -99,28 +99,47 @@ struct RuleParseResult {
     bool ok() const { return rule.has_value(); }
 };
 
+inline std::size_t ruleConditionSeparator(const std::string& text, std::size_t first) {
+    bool escaped = false;
+    for (std::size_t i = first; i < text.size(); ++i) {
+        if (escaped) { escaped = false; continue; }
+        if (text[i] == '\\') { escaped = true; continue; }
+        if (text[i] == '&' && i + 1 < text.size() && text[i + 1] == '&' &&
+            (i == first || configSpace(text[i - 1])) &&
+            (i + 2 == text.size() || configSpace(text[i + 2]))) return i;
+    }
+    return std::string::npos;
+}
+
 inline RuleParseResult parseRule(const std::string& input, std::size_t line = 0) {
     const auto comma = input.find(',');
     if (comma == std::string::npos) return {std::nullopt, "expected action,condition"};
     const auto action = parseRuleAction(input.substr(0, comma));
     if (!action.ok()) return {std::nullopt, action.error};
-    const auto condition = trim(input.substr(comma + 1));
-    const auto colon = condition.find(':');
-    const auto targetName = condition.substr(0, colon);
-    RuleTarget target = RuleTarget::Class;
-    if (targetName == "role") target = RuleTarget::Role;
-    else if (targetName == "title") target = RuleTarget::Title;
-    else if (targetName != "class") return {std::nullopt, "unknown rule target: " + targetName};
-    if (colon == std::string::npos) return {std::nullopt, "expected target:regex condition"};
-    const auto pattern = trim(condition.substr(colon + 1));
-    if (pattern.empty()) return {std::nullopt, "rule regex must not be empty"};
+    const auto selectors = trim(input.substr(comma + 1));
     Rule rule;
     rule.action_ = *action.action;
     rule.line_ = line;
-    try {
-        rule.conditions_.push_back({target, pattern, std::regex(pattern, std::regex::ECMAScript | std::regex::optimize), false});
-    } catch (const std::regex_error& error) {
-        return {std::nullopt, std::string("invalid regex: ") + error.what()};
+    std::size_t first = 0;
+    while (true) {
+        const auto separator = ruleConditionSeparator(selectors, first);
+        const auto condition = trim(selectors.substr(first, separator == std::string::npos ? separator : separator - first));
+        const auto colon = condition.find(':');
+        if (colon == std::string::npos) return {std::nullopt, "expected target:regex condition"};
+        const auto targetName = condition.substr(0, colon);
+        RuleTarget target = RuleTarget::Class;
+        if (targetName == "role") target = RuleTarget::Role;
+        else if (targetName == "title") target = RuleTarget::Title;
+        else if (targetName != "class") return {std::nullopt, "unknown rule target: " + targetName};
+        const auto pattern = trim(condition.substr(colon + 1));
+        if (pattern.empty()) return {std::nullopt, "rule regex must not be empty"};
+        try {
+            rule.conditions_.push_back({target, pattern, std::regex(pattern, std::regex::ECMAScript | std::regex::optimize), false});
+        } catch (const std::regex_error& error) {
+            return {std::nullopt, std::string("invalid regex: ") + error.what()};
+        }
+        if (separator == std::string::npos) break;
+        first = separator + 2;
     }
     return {std::move(rule), ""};
 }
