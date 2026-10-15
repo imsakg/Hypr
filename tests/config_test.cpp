@@ -37,4 +37,13 @@ TEST(hexadecimal_is_signed_not_unsigned_reinterpretation) {
         CHECK(!parseInteger(text));
 }
 
+TEST(real_numbers_are_decimal_finite_and_fully_consumed) {
+    CHECK(parseReal("  -1.25e2 ") == -125.0);
+    CHECK(parseReal("+.5") == 0.5);
+    CHECK(parseReal("1.") == 1.0);
+    CHECK(parseReal("0") == 0.0);
+    for (const auto* text : {"", ".", "1e", "nan", "NaN", "inf", "-Infinity", "1e9999", "2.0px", "0x1p2", "1,5", "1 2"})
+        CHECK(!parseReal(text));
+}
+
 TEST_MAIN()

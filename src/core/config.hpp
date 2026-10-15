@@ -1,7 +1,10 @@
 #pragma once
 
+#include <cmath>
 #include <limits>
+#include <locale>
 #include <optional>
+#include <sstream>
 #include <string>
 
 namespace HyprCore {
@@ -64,6 +67,22 @@ inline std::optional<int> parseInteger(const std::string& input) {
     if (negative && value == positiveLimit + 1U) return std::numeric_limits<int>::min();
     const auto signedValue = static_cast<int>(value);
     return negative ? -signedValue : signedValue;
+}
+
+inline std::optional<double> parseReal(const std::string& input) {
+    const auto text = trim(input);
+    if (text.empty()) return std::nullopt;
+    // Reject alternate numeric syntaxes regardless of the active locale.
+    for (char c : text) {
+        if ((c < '0' || c > '9') && c != '+' && c != '-' && c != '.' && c != 'e' && c != 'E')
+            return std::nullopt;
+    }
+    std::istringstream stream(text);
+    stream.imbue(std::locale::classic());
+    double value = 0;
+    stream >> std::noskipws >> value;
+    if (stream.fail() || !stream.eof() || !std::isfinite(value)) return std::nullopt;
+    return value;
 }
 
 } // namespace HyprCore
