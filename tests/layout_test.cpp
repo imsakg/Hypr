@@ -26,4 +26,9 @@ TEST(outer_gap_is_not_reapplied_to_each_cell) {
  const auto cells=tile(Rect{-100,10,100,60},2,options);
  CHECK(cells[0]==Rect{-95,15,45,50}); CHECK(cells[1]==Rect{-50,15,45,50});
 }
+TEST(folded_layout_alternates_width_and_height) {
+ LayoutOptions o; o.kind=LayoutKind::Folded;
+ const auto cells=tile(Rect{0,0,100,80},3,o);
+ CHECK(cells[0]==Rect{0,0,50,80}); CHECK(cells[1]==Rect{50,0,50,40}); CHECK(cells[2]==Rect{50,40,50,40});
+}
 TEST_MAIN()

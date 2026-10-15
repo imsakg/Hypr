@@ -32,9 +32,25 @@ inline std::vector<Rect> splitAxis(Rect area, std::size_t count, bool horizontal
     }
     return result;
 }
+inline std::vector<Rect> folded(Rect area, std::size_t count, int gap, double ratio = 0.5, bool horizontal = true) {
+    if (count>65536) throw std::length_error("too many layout clients");
+    std::vector<Rect> result;
+    for (std::size_t i=0;i<count;++i) {
+        if (i+1==count) { result.push_back(area); break; }
+        const int extent=std::max(0,horizontal?area.width:area.height);
+        const int spacing=std::clamp(gap,0,extent);
+        const int taken=static_cast<int>((extent-spacing)*ratio);
+        Rect first=area;
+        if (horizontal) { first.width=taken; area.x=saturatedInt(static_cast<long long>(area.x)+taken+spacing); area.width=extent-taken-spacing; }
+        else { first.height=taken; area.y=saturatedInt(static_cast<long long>(area.y)+taken+spacing); area.height=extent-taken-spacing; }
+        result.push_back(first); horizontal=!horizontal;
+    }
+    return result;
+}
 // Layout internals.
 inline std::vector<Rect> tile(Rect area, std::size_t count, LayoutOptions options = {}) {
     area = inset(area,options.outerGap);
+    if (options.kind==LayoutKind::Folded) return folded(area,count,options.innerGap);
     return splitAxis(area,count,options.kind != LayoutKind::Vertical,options.innerGap);
 }
 } // namespace HyprCore
