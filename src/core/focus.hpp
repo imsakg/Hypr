@@ -32,6 +32,13 @@ inline bool valid(const FocusTarget& target) {
 inline long long center(const Rect& bounds, bool horizontal) {
     return horizontal ? 2LL * bounds.x + bounds.width : 2LL * bounds.y + bounds.height;
 }
+inline bool overlaps(const Rect& a, const Rect& b, bool horizontal) {
+    const long long startA = horizontal ? a.x : a.y;
+    const long long startB = horizontal ? b.x : b.y;
+    const auto endA = startA + (horizontal ? a.width : a.height);
+    const auto endB = startB + (horizontal ? b.width : b.height);
+    return std::max(startA, startB) < std::min(endA, endB);
+}
 inline long long magnitude(long long value) { return value < 0 ? -value : value; }
 }
 
@@ -43,7 +50,7 @@ inline std::optional<FocusWindowId> directionalFocus(const std::vector<FocusTarg
     const auto source = std::find_if(targets.begin(), targets.end(),
         [current](const FocusTarget& target) { return target.id == current; });
     if (source == targets.end() || !FocusDetail::valid(*source)) return std::nullopt;
-    using Score = std::tuple<long long, long long, FocusWindowId>;
+    using Score = std::tuple<int, long long, long long, FocusWindowId>;
     std::optional<Score> best;
     std::optional<FocusWindowId> selected;
     for (const auto& target : targets) {
@@ -53,7 +60,8 @@ inline std::optional<FocusWindowId> directionalFocus(const std::vector<FocusTarg
         if (forward <= 0) continue;
         const auto cross = FocusDetail::magnitude(FocusDetail::center(target.bounds, !axis->horizontal) -
                                                  FocusDetail::center(source->bounds, !axis->horizontal));
-        const Score score{forward, cross, target.id};
+        const auto overlap = FocusDetail::overlaps(source->bounds, target.bounds, !axis->horizontal);
+        const Score score{overlap ? 0 : 1, forward, cross, target.id};
         if (!best || score < *best) { best = score; selected = target.id; }
     }
     return selected;
