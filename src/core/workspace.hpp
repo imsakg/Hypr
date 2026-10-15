@@ -1,5 +1,7 @@
 #pragma once
+#include <iterator>
 #include <map>
+#include <optional>
 #include <vector>
 
 namespace HyprCore {
@@ -18,6 +20,18 @@ public:
     const Workspace* workspace(WorkspaceId id) const {
         const auto it = workspaces_.find(id);
         return it == workspaces_.end() ? nullptr : &it->second;
+    }
+    std::optional<WorkspaceId> nextWorkspace(WorkspaceId from) const {
+        auto it = workspaces_.find(from);
+        if (it == workspaces_.end()) return std::nullopt;
+        if (++it == workspaces_.end()) it = workspaces_.begin();
+        return it->first;
+    }
+    std::optional<WorkspaceId> previousWorkspace(WorkspaceId from) const {
+        auto it = workspaces_.find(from);
+        if (it == workspaces_.end()) return std::nullopt;
+        if (it == workspaces_.begin()) it = workspaces_.end();
+        return std::prev(it)->first;
     }
     std::vector<WorkspaceId> ids() const {
         std::vector<WorkspaceId> result;

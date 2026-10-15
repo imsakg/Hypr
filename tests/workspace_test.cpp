@@ -15,4 +15,21 @@ TEST(workspace_ids_are_positive_sorted_and_unique) {
     CHECK(!state.workspace(4));
     CHECK(!state.workspace(-1));
 }
+TEST(workspace_navigation_wraps_existing_sorted_ids_not_numeric_gaps) {
+    WorkspaceState state;
+    CHECK(!state.nextWorkspace(1));
+    CHECK(!state.previousWorkspace(1));
+    state.addWorkspace(8);
+    CHECK(state.nextWorkspace(8) == 8);
+    CHECK(state.previousWorkspace(8) == 8);
+    state.addWorkspace(2);
+    state.addWorkspace(20);
+    CHECK(state.nextWorkspace(2) == 8);
+    CHECK(state.nextWorkspace(20) == 2);
+    CHECK(state.previousWorkspace(2) == 20);
+    CHECK(state.previousWorkspace(20) == 8);
+    CHECK(!state.nextWorkspace(3));
+    CHECK(!state.previousWorkspace(-1));
+    CHECK(state.ids() == std::vector<WorkspaceId>({2, 8, 20}));
+}
 TEST_MAIN()
