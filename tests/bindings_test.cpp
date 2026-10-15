@@ -26,4 +26,12 @@ TEST(modifier_separators_are_explicit_and_duplicates_are_errors) {
     for (const auto* text : {"+SUPER", "SUPER+", "SUPER++SHIFT", "SUPER+ +SHIFT", "CTRL CONTROL", "NONE SHIFT", "SUPER,SHIFT", "SUPER|SHIFT", "SUPER SUPER"})
         CHECK(!parseModifiers(text));
 }
+TEST(matching_ignores_locks_and_pointer_button_state) {
+    CHECK(normalizeModifiers(ModSuper | ModLock | Mod2 | (1u << 8)) == ModSuper);
+    CHECK(modifiersMatch(ModSuper, ModSuper | ModLock | Mod2));
+    CHECK(!modifiersMatch(ModSuper, ModSuper | ModShift));
+    CHECK(modifiersMatch(ModSuper | ModLock, ModSuper));
+    CHECK(!modifiersMatch(ModSuper, ModSuper | Mod2, ModLock));
+    CHECK(normalizeModifiers(ModSuper | Mod3, ModLock | Mod3) == ModSuper);
+}
 TEST_MAIN()

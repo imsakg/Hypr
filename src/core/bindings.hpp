@@ -14,6 +14,16 @@ inline constexpr ModifierMask Mod2 = 1u << 4;
 inline constexpr ModifierMask Mod3 = 1u << 5;
 inline constexpr ModifierMask ModSuper = 1u << 6;
 inline constexpr ModifierMask Mod5 = 1u << 7;
+inline constexpr ModifierMask KeyboardModifiers = 0xffu;
+inline constexpr ModifierMask DefaultIgnoredModifiers = ModLock | Mod2;
+
+inline ModifierMask normalizeModifiers(ModifierMask state, ModifierMask ignored = DefaultIgnoredModifiers) {
+    return state & KeyboardModifiers & ~ignored;
+}
+inline bool modifiersMatch(ModifierMask binding, ModifierMask state,
+                           ModifierMask ignored = DefaultIgnoredModifiers) {
+    return normalizeModifiers(binding, ignored) == normalizeModifiers(state, ignored);
+}
 
 namespace BindingDetail {
 inline bool space(char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; }
