@@ -46,6 +46,24 @@ inline bool overlaps(const Rect& a, const Rect& b, bool horizontal) {
 inline long long magnitude(long long value) { return value < 0 ? -value : value; }
 }
 
+// Input order is the cycle order. Missing/ineligible current starts at the chosen end.
+inline std::optional<FocusWindowId> cycleFocus(const std::vector<FocusTarget>& targets,
+                                              std::optional<FocusWindowId> current = std::nullopt,
+                                              bool reverse = false, bool wrap = true) {
+    std::vector<FocusWindowId> eligible;
+    for (const auto& target : targets) if (focusEligible(target)) eligible.push_back(target.id);
+    if (eligible.empty()) return std::nullopt;
+    const auto found = current ? std::find(eligible.begin(), eligible.end(), *current) : eligible.end();
+    if (found == eligible.end()) return reverse ? eligible.back() : eligible.front();
+    const auto index = static_cast<std::size_t>(found - eligible.begin());
+    if (reverse) {
+        if (index) return eligible[index - 1];
+        return wrap ? std::optional<FocusWindowId>{eligible.back()} : std::nullopt;
+    }
+    if (index + 1 < eligible.size()) return eligible[index + 1];
+    return wrap ? std::optional<FocusWindowId>{eligible.front()} : std::nullopt;
+}
+
 // Pure selection: callers supply only the relevant workspace/monitor snapshot.
 inline std::optional<FocusWindowId> directionalFocus(const std::vector<FocusTarget>& targets,
                                                     FocusWindowId current, FocusDirection direction,

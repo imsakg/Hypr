@@ -71,4 +71,25 @@ TEST(directional_wrap_is_opt_in_and_chooses_the_opposite_edge_only_when_needed) 
     CHECK(directionalFocus({{1, {100, 100, 50, 50}}, {2, {-500, 0, 50, 50}},
                             {3, {0, 100, 50, 50}}}, 1, FocusDirection::Right, true) == 3);
 }
+TEST(focus_cycles_preserve_input_order_filter_eligibility_and_support_reverse) {
+    const std::vector<FocusTarget> targets{
+        {30, {0, 0, 10, 10}}, {10, {10, 0, 10, 10}, false},
+        {20, {20, 0, 10, 10}}, {40, {30, 0, 10, 10}, true, false},
+        {50, {40, 0, 10, 10}, true, true, true}, {60, {50, 0, 10, 10}}};
+    CHECK(cycleFocus(targets) == 30);
+    CHECK(cycleFocus(targets, std::nullopt, true) == 60);
+    CHECK(cycleFocus(targets, 30) == 20);
+    CHECK(cycleFocus(targets, 20) == 60);
+    CHECK(cycleFocus(targets, 60) == 30);
+    CHECK(cycleFocus(targets, 30, true) == 60);
+    CHECK(cycleFocus(targets, 60, true) == 20);
+    CHECK(!cycleFocus(targets, 60, false, false));
+    CHECK(!cycleFocus(targets, 30, true, false));
+    CHECK(cycleFocus(targets, 10) == 30);
+    CHECK(cycleFocus(targets, 999, true, false) == 60);
+    CHECK(!cycleFocus({}));
+    CHECK(!cycleFocus({{1, {0, 0, 0, 10}}}));
+    CHECK(cycleFocus({{1, {0, 0, 10, 10}}}, 1) == 1);
+    CHECK(!cycleFocus({{1, {0, 0, 10, 10}}}, 1, false, false));
+}
 TEST_MAIN()
