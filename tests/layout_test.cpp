@@ -64,4 +64,8 @@ TEST(smart_gaps_expand_only_single_client_workspaces) {
  CHECK(tile(Rect{0,0,100,80},1,o)[0]==Rect{0,0,100,80});
  CHECK(tile(Rect{0,0,100,80},2,o)[0].x==10);
 }
+TEST(weighted_equal_cells_keep_every_pixel) {
+ const auto cells=tileWeighted(Rect{0,0,101,60},{1,1},true,1);
+ CHECK(cells[0].width==50); CHECK(cells[1]==Rect{51,0,50,60});
+}
 TEST_MAIN()

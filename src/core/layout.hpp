@@ -49,6 +49,9 @@ inline std::vector<Rect> folded(Rect area, std::size_t count, int gap, double ra
     }
     return result;
 }
+inline std::vector<Rect> tileWeighted(Rect area, const std::vector<double>& weights, bool horizontal = true, int gap = 0) {
+    return splitAxis(area,weights.size(),horizontal,gap);
+}
 // Layout internals.
 inline std::vector<Rect> tile(Rect area, std::size_t count, LayoutOptions options = {}) {
     area = inset(area,options.smartGaps && count==1 ? 0 : options.outerGap);
