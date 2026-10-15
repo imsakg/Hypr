@@ -11,7 +11,7 @@ struct WindowProperties {
     std::string title;
 };
 
-enum class RuleActionType { Float, Tile, Pseudo, NoInterventions, Workspace, Monitor };
+enum class RuleActionType { Float, Tile, Pseudo, NoInterventions, Workspace, Monitor, Move, Size };
 struct RuleAction {
     RuleActionType type = RuleActionType::Float;
     int first = 0;
@@ -45,6 +45,15 @@ inline ActionParseResult parseRuleAction(const std::string& input) {
         const bool workspace = words[0] == "workspace";
         if (!id || *id < (workspace ? 1 : 0)) return {std::nullopt, "action ID is out of range"};
         return {RuleAction{workspace ? RuleActionType::Workspace : RuleActionType::Monitor, *id, 0, true}, ""};
+    }
+    if (!words.empty() && (words[0] == "move" || words[0] == "size")) {
+        if (words.size() != 3) return {std::nullopt, "geometry action expects exactly two integers"};
+        const auto first = parseInteger(words[1]);
+        const auto second = parseInteger(words[2]);
+        const bool size = words[0] == "size";
+        if (!first || !second || (size && (*first <= 0 || *second <= 0)))
+            return {std::nullopt, "invalid coordinates or nonpositive size"};
+        return {RuleAction{size ? RuleActionType::Size : RuleActionType::Move, *first, *second, true}, ""};
     }
     return {std::nullopt, "unknown or malformed rule action: " + text};
 }

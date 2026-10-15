@@ -63,4 +63,20 @@ TEST(workspace_and_monitor_actions_validate_exact_bounded_ids) {
     CHECK(parseRule("workspace 2,class:term").ok());
 }
 
+TEST(move_accepts_signed_coordinates_and_size_requires_positive_dimensions) {
+    const auto move = parseRuleAction(" move\t-2147483648 +0x7fffffff ");
+    CHECK(move.ok());
+    CHECK(move.action->type == RuleActionType::Move);
+    CHECK(move.action->first == (-2147483647 - 1));
+    CHECK(move.action->second == 2147483647);
+    CHECK(parseRuleAction("move 0 -9").ok());
+    const auto size = parseRuleAction("size +500 0x32");
+    CHECK(size.ok());
+    CHECK(size.action->type == RuleActionType::Size);
+    CHECK(size.action->first == 500);
+    CHECK(size.action->second == 50);
+    for (const auto* text : {"move", "move 1", "move 1 2 3", "move 1x 2", "move 2147483648 0", "size 0 1", "size 1 -1", "size 1", "size 1 2tail", "size 1 2 3", "size -2147483649 2"})
+        CHECK(!parseRuleAction(text).ok());
+}
+
 TEST_MAIN()
