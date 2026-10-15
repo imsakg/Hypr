@@ -18,4 +18,9 @@ TEST(resize_deltas_saturate_before_enforcing_hints) {
  CHECK(resizeBy(Rect{4,8,80,60},20,-100)==Rect{4,8,100,1});
  CHECK(resizeBy(Rect{0,0,100,60},std::numeric_limits<int>::max(),0).width==std::numeric_limits<int>::max());
 }
+TEST(edge_resizing_keeps_right_and_bottom_anchored) {
+ CHECK(resizeEdges(Rect{10,20,80,60},20,10,true,true)==Rect{30,30,60,50});
+ SizeHints h; h.minWidth=40;
+ CHECK(resizeEdges(Rect{10,20,80,60},100,0,true,false,h)==Rect{50,20,40,60});
+}
 TEST_MAIN()

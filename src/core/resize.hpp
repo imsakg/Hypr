@@ -24,4 +24,11 @@ inline Rect resizeBy(Rect r,int deltaWidth,int deltaHeight,SizeHints hints = {})
     r.height=saturatedInt(static_cast<long long>(r.height)+deltaHeight);
     return constrainSize(r,hints);
 }
+inline Rect resizeEdges(Rect r,int dx,int dy,bool left,bool top,SizeHints hints = {}) {
+    const auto old=r;
+    r=resizeBy(r,left?saturatedInt(-static_cast<long long>(dx)):dx,top?saturatedInt(-static_cast<long long>(dy)):dy,hints);
+    if (left) r.x=saturatedInt(static_cast<long long>(old.x)+old.width-r.width);
+    if (top) r.y=saturatedInt(static_cast<long long>(old.y)+old.height-r.height);
+    return r;
+}
 } // namespace HyprCore
