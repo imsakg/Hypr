@@ -169,4 +169,18 @@ TEST(config_store_replaces_only_after_successful_parse) {
     CHECK(store.document().entries.empty());
 }
 
+TEST(bindings_keep_shell_arguments_opaque_and_allow_unmodified_keys) {
+    const auto result = parseBinding(R"( SUPER , R , exec , printf '%s,%s' "a,b" c\,d )");
+    CHECK(result.ok());
+    CHECK(result.binding->modifiers == "SUPER");
+    CHECK(result.binding->key == "R");
+    CHECK(result.binding->dispatcher == "exec");
+    CHECK(result.binding->argument == R"(printf '%s,%s' "a,b" c\,d)");
+    CHECK(parseBinding(",F1,killactive,").ok());
+    CHECK(!parseBinding("SUPER,R,exec").ok());
+    CHECK(!parseBinding("SUPER,,exec,xterm").ok());
+    CHECK(!parseBinding("SUPER,R,,xterm").ok());
+    CHECK(!parseBinding("\"open,R,exec,xterm").ok());
+}
+
 TEST_MAIN()

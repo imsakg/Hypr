@@ -278,4 +278,26 @@ private:
     std::vector<ConfigError> errors_;
 };
 
+struct Binding {
+    std::string modifiers;
+    std::string key;
+    std::string dispatcher;
+    std::string argument;
+};
+
+struct BindingParseResult {
+    std::optional<Binding> binding;
+    std::string error;
+    bool ok() const { return binding.has_value(); }
+};
+
+inline BindingParseResult parseBinding(const std::string& text) {
+    std::vector<std::string> fields;
+    try { fields = splitFields(text, 4); }
+    catch (const std::invalid_argument& error) { return {std::nullopt, error.what()}; }
+    if (fields.size() != 4) return {std::nullopt, "binding needs modifiers,key,dispatcher,argument"};
+    if (fields[1].empty() || fields[2].empty()) return {std::nullopt, "binding key and dispatcher must not be empty"};
+    return {Binding{fields[0], fields[1], fields[2], fields[3]}, ""};
+}
+
 } // namespace HyprCore
