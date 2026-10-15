@@ -56,4 +56,24 @@ TEST(printable_ascii_keysyms_are_literal_and_never_execute_commands) {
     CHECK(!parseKeysym(std::string(1, '\0')));
     CHECK(!parseKeysym("\xC3\xA9"));
 }
+TEST(named_navigation_keys_have_stable_protocol_values) {
+    CHECK(parseKeysym("Left") == 0xff51u);
+    CHECK(parseKeysym("up") == 0xff52u);
+    CHECK(parseKeysym("RIGHT") == 0xff53u);
+    CHECK(parseKeysym("Down") == 0xff54u);
+    CHECK(parseKeysym("Return") == 0xff0du);
+    CHECK(parseKeysym("Enter") == parseKeysym("Return"));
+    CHECK(parseKeysym("Escape") == 0xff1bu);
+    CHECK(parseKeysym("Esc") == parseKeysym("Escape"));
+    CHECK(parseKeysym("Tab") == 0xff09u);
+    CHECK(parseKeysym("Space") == 32u);
+    CHECK(parseKeysym("BackSpace") == 0xff08u);
+    CHECK(parseKeysym("Home") == 0xff50u);
+    CHECK(parseKeysym("End") == 0xff57u);
+    CHECK(parseKeysym("Insert") == 0xff63u);
+    CHECK(parseKeysym("Delete") == 0xffffu);
+    CHECK(parseKeysym("Page_Up") == 0xff55u);
+    CHECK(parseKeysym("Page_Down") == 0xff56u);
+    CHECK(!parseKeysym("LeftOver"));
+}
 TEST_MAIN()

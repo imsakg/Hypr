@@ -92,6 +92,16 @@ inline std::optional<KeySym> parseKeysym(std::string_view text) {
         const auto value = static_cast<unsigned char>(text.front());
         if (value >= 32 && value <= 126) return value;
     }
+    const auto name = BindingDetail::upper(text);
+    struct NamedKey { std::string_view name; KeySym value; };
+    static constexpr NamedKey navigation[] = {
+        {"LEFT", 0xff51}, {"UP", 0xff52}, {"RIGHT", 0xff53}, {"DOWN", 0xff54},
+        {"RETURN", 0xff0d}, {"ENTER", 0xff0d}, {"ESCAPE", 0xff1b}, {"ESC", 0xff1b},
+        {"TAB", 0xff09}, {"SPACE", 0x20}, {"BACKSPACE", 0xff08}, {"HOME", 0xff50},
+        {"END", 0xff57}, {"INSERT", 0xff63}, {"DELETE", 0xffff},
+        {"PAGE_UP", 0xff55}, {"PRIOR", 0xff55}, {"PAGE_DOWN", 0xff56}, {"NEXT", 0xff56}
+    };
+    for (const auto& key : navigation) if (key.name == name) return key.value;
     return std::nullopt;
 }
 }
