@@ -73,6 +73,14 @@ inline std::vector<Rect> tileWeighted(Rect area, const std::vector<double>& weig
     }
     return result;
 }
+inline std::optional<int> parseLayoutId(std::string_view name) {
+    if (name=="dwindle" || name=="0") return 0;
+    if (name=="master" || name=="1") return 1;
+    if (name=="horizontal" || name=="2") return 2;
+    if (name=="vertical" || name=="3") return 3;
+    if (name=="folded" || name=="4") return 4;
+    return std::nullopt;
+}
 // Layout internals.
 inline std::vector<Rect> tile(Rect area, std::size_t count, LayoutOptions options = {}) {
     area = inset(area,options.smartGaps && count==1 ? 0 : options.outerGap);

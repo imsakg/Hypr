@@ -78,4 +78,9 @@ TEST(invalid_weights_never_produce_nan_or_negative_cells) {
  CHECK(cells[0].width==25); CHECK(cells[3].x+cells[3].width==100);
  CHECK(tileWeighted(Rect{0,0,100,20},{1e300,1e300})[0].width==50);
 }
+TEST(layout_names_preserve_legacy_numeric_contracts) {
+ CHECK(parseLayoutId("dwindle")==0); CHECK(parseLayoutId("master")==1);
+ CHECK(parseLayoutId("horizontal")==2); CHECK(parseLayoutId("vertical")==3); CHECK(parseLayoutId("folded")==4);
+ CHECK(!parseLayoutId("unknown")); CHECK(!parseLayoutId("4x"));
+}
 TEST_MAIN()
