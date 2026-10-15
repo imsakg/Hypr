@@ -1549,6 +1549,7 @@ void CWindowManager::warpCursorTo(Vector2D to) {
 }
 
 void CWindowManager::moveActiveWindowToWorkspace(int workspace) {
+    if (workspace<=0) return;
 
     auto PWINDOW = getWindowFromDrawable(LastWindow);
 
@@ -1723,6 +1724,7 @@ void CWindowManager::moveActiveFocusTo(char dir) {
 }
 
 void CWindowManager::changeWorkspaceByID(int ID) {
+    if (ID<=0) return;
 
     auto MONITOR = getMonitorFromCursor();
 

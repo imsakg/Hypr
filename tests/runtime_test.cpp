@@ -38,4 +38,9 @@ TEST(runtime_rule_compilation_never_applies_broken_regexes) {
  const auto rule=parseRule("float,class:^Term$ && !title:^Secret$"); CHECK(rule.ok());
  CHECK(rule.rule->matches({"Term","","Public"})); CHECK(!rule.rule->matches({"Term","","Secret"}));
 }
+TEST(workspace_dispatch_resolves_targets_without_unsigned_wrap) {
+ CHECK(workspaceTarget({1,3,8},3,1,"next")==8); CHECK(workspaceTarget({1,3,8},1,3,"prev")==8);
+ CHECK(workspaceTarget({1,3,8},3,1,"+2")==5); CHECK(!workspaceTarget({1,3},1,3,"-2"));
+ CHECK(parseConfigBinding("SUPER,1,workspace,-1").ok()); CHECK(parseConfigBinding("SUPER,1,workspace,next").ok());
+}
 TEST_MAIN()

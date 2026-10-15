@@ -84,32 +84,27 @@ void KeybindManager::call(std::string args) {
 }
 
 void KeybindManager::movewindow(std::string arg) {
-    g_pWindowManager->moveActiveWindowTo(arg[0]);
+    if (arg.size()==1 && std::string("lrud").find(arg[0])!=std::string::npos) g_pWindowManager->moveActiveWindowTo(arg[0]);
 }
 
 void KeybindManager::movefocus(std::string arg) {
-    g_pWindowManager->moveActiveFocusTo(arg[0]);
+    if (arg.size()==1 && std::string("lrud").find(arg[0])!=std::string::npos) g_pWindowManager->moveActiveFocusTo(arg[0]);
 }
 
+namespace {
+std::optional<int> resolveWorkspaceArgument(const std::string& argument) {
+    const auto monitor=g_pWindowManager->getMonitorFromCursor();
+    if (!monitor || monitor->ID<0 || static_cast<std::size_t>(monitor->ID)>=g_pWindowManager->activeWorkspaces.size()) return std::nullopt;
+    std::vector<int> ids;
+    for (auto& workspace:g_pWindowManager->workspaces) ids.push_back(workspace.getID());
+    return HyprCore::workspaceTarget(ids,g_pWindowManager->activeWorkspaces[monitor->ID],g_pWindowManager->lastActiveWorkspaceID,argument);
+}
+}
 void KeybindManager::movetoworkspace(std::string arg) {
-    try {
-        g_pWindowManager->moveActiveWindowToWorkspace(stoi(arg));
-    } catch (...) {
-        Debug::log(ERR, "Invalid arg in movetoworkspace, arg: " + arg);
-    }
-    
+    if (const auto target=resolveWorkspaceArgument(arg)) g_pWindowManager->moveActiveWindowToWorkspace(*target);
 }
-
 void KeybindManager::changeworkspace(std::string arg) {
-    int ID = -1;
-    try {
-        ID = std::stoi(arg.c_str());
-    } catch (...) { ; }
-
-    if (ID != -1) {
-        Debug::log(LOG, "Changing the current workspace to " + std::to_string(ID));
-        g_pWindowManager->changeWorkspaceByID(ID);
-    }
+    if (const auto target=resolveWorkspaceArgument(arg)) g_pWindowManager->changeWorkspaceByID(*target);
 }
 
 void KeybindManager::changetolastworkspace(std::string arg) {
@@ -173,7 +168,7 @@ void KeybindManager::toggleActiveWindowFloating(std::string unusedArg) {
 }
 
 void KeybindManager::changeSplitRatio(std::string args) {
-    g_pWindowManager->changeSplitRatioCurrent(args[0]);
+    if (args=="+" || args=="-") g_pWindowManager->changeSplitRatioCurrent(args[0]);
 }
 
 void KeybindManager::togglePseudoActive(std::string args) {

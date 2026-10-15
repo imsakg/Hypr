@@ -296,6 +296,11 @@ struct ConfigBindingParseResult {
     bool ok() const { return binding.has_value(); }
 };
 
+inline bool validWorkspaceTarget(const std::string& text) {
+    if (text=="next" || text=="prev" || text=="last" || text=="lastworkspace") return true;
+    const auto value=parseInteger(text);
+    return value && *value!=0 && (*value>0 || (!text.empty() && text.front()=='-'));
+}
 inline ConfigBindingParseResult parseConfigBinding(const std::string& text) {
     if (text.find('\0') != std::string::npos) return {std::nullopt, "embedded NUL byte in binding"};
     if (!configQuotesClosed(text)) return {std::nullopt, "unclosed quote in binding"};
@@ -317,8 +322,7 @@ inline ConfigBindingParseResult parseConfigBinding(const std::string& text) {
             return {std::nullopt, "direction must be exactly l, r, u, or d"};
     }
     if (fields[2] == "workspace" || fields[2] == "movetoworkspace") {
-        const auto id = parseInteger(fields[3]);
-        if (!id || *id <= 0) return {std::nullopt, "workspace must be a positive integer"};
+        if (!validWorkspaceTarget(fields[3])) return {std::nullopt, "invalid positive or relative workspace target"};
     }
     if (fields[2] == "splitratio" && fields[3] != "+" && fields[3] != "-")
         return {std::nullopt, "splitratio expects exactly + or -"};

@@ -32,4 +32,11 @@ inline std::optional<KeySym> runtimeKeysym(std::string name) {
     if (configLower(name)=="equals") name="equal";
     return parseKeysym(name);
 }
+inline std::optional<WorkspaceId> workspaceTarget(const std::vector<int>& ids,int active,int last,const std::string& argument) {
+    WorkspaceState state;
+    for (int id:ids) state.addWorkspace(id);
+    if (last>0) state.activate(last);
+    if (active>0) state.activate(active);
+    return state.resolveTarget(argument);
+}
 } // namespace HyprCore
