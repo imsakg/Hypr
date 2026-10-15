@@ -43,4 +43,8 @@ TEST(workspace_dispatch_resolves_targets_without_unsigned_wrap) {
  CHECK(workspaceTarget({1,3,8},3,1,"+2")==5); CHECK(!workspaceTarget({1,3},1,3,"-2"));
  CHECK(parseConfigBinding("SUPER,1,workspace,-1").ok()); CHECK(parseConfigBinding("SUPER,1,workspace,next").ok());
 }
+TEST(focus_history_cleanup_is_idempotent_for_closed_clients) {
+ FocusHistory history; history.remember(9); history.remember(3); CHECK(history.forget(9)); CHECK(!history.forget(9));
+ CHECK(history.fallback({{9,{0,0,20,20}},{3,{30,0,20,20}}})==3);
+}
 TEST_MAIN()

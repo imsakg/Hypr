@@ -533,10 +533,17 @@ void CWindowManager::refreshDirtyWindows() {
 }
 
 void CWindowManager::setFocusedWindow(xcb_drawable_t window) {
+    if (!Screen) return;
+    if (!window || window==Screen->root) {
+        LastWindow=0;
+        xcb_set_input_focus(DisplayConnection,XCB_INPUT_FOCUS_POINTER_ROOT,Screen->root,XCB_CURRENT_TIME);
+        EWMH::updateCurrentWindow(0);
+        return;
+    }
     if (window && window != Screen->root) {
         const auto PNEWFOCUS = g_pWindowManager->getWindowFromDrawable(window);
 
-        if (PNEWFOCUS && PNEWFOCUS->getNoInterventions()) {
+        if (!PNEWFOCUS || PNEWFOCUS->getDrawable()<=0 || PNEWFOCUS->getDead() || PNEWFOCUS->getDock() || !isWorkspaceVisible(PNEWFOCUS->getWorkspaceID()) || PNEWFOCUS->getNoInterventions()) {
             Debug::log(LOG, "Not setting focus to a non-interventions window.");
             return;
         }
@@ -560,6 +567,7 @@ void CWindowManager::setFocusedWindow(xcb_drawable_t window) {
         }
 
         LastWindow = window;
+        focusHistory.remember(window);
 
         if (PNEWFOCUS) {
             applyShapeToWindow(g_pWindowManager->getWindowFromDrawable(window));
@@ -740,6 +748,7 @@ void CWindowManager::addWindowToVectorSafe(CWindow window) {
 }
 
 void CWindowManager::removeWindowFromVectorSafe(int64_t window) {
+    if (window>0) focusHistory.forget(window);
 
     if (!window)
         return;
@@ -1467,71 +1476,22 @@ void CWindowManager::fixWindowOnClose(CWindow* pClosedWindow) {
 }
 
 CWindow* CWindowManager::getNeighborInDir(char dir) {
-
-    const auto CURRENTWINDOW = getWindowFromDrawable(LastWindow);
-
-    if (!CURRENTWINDOW)
-        return nullptr;
-
-    const auto POSA = CURRENTWINDOW->getPosition();
-    const auto SIZEA = CURRENTWINDOW->getSize();
-
-    auto longestIntersect = -1;
-    CWindow* longestIntersectWindow = nullptr;
-
-    for (auto& w : windows) {
-        if (w.getDrawable() == CURRENTWINDOW->getDrawable() || w.getDrawable() < 1 || w.getIsFloating() || !isWorkspaceVisible(w.getWorkspaceID()))
-            continue;
-
-        const auto POSB = w.getPosition();
-        const auto SIZEB = w.getSize();
-
-        switch (dir) {
-            case 'l':
-                if (STICKS(POSA.x, POSB.x + SIZEB.x)) {
-                    const auto INTERSECTLEN = std::max((double)0, std::min(POSA.y + SIZEA.y, POSB.y + SIZEB.y) - std::max(POSA.y, POSB.y));
-                    if (INTERSECTLEN > longestIntersect) {
-                        longestIntersect = INTERSECTLEN;
-                        longestIntersectWindow = &w;
-                    }       
-                }
-                break;
-            case 'r':
-                if (STICKS(POSA.x + SIZEA.x, POSB.x)) {
-                    const auto INTERSECTLEN = std::max((double)0, std::min(POSA.y + SIZEA.y, POSB.y + SIZEB.y) - std::max(POSA.y, POSB.y));
-                    if (INTERSECTLEN > longestIntersect) {
-                        longestIntersect = INTERSECTLEN;
-                        longestIntersectWindow = &w;
-                    }
-                }
-                break;
-            case 't':
-            case 'u':
-                if (STICKS(POSA.y, POSB.y + SIZEB.y)) {
-                    const auto INTERSECTLEN = std::max((double)0, std::min(POSA.x + SIZEA.x, POSB.x + SIZEB.x) - std::max(POSA.x, POSB.x));
-                    if (INTERSECTLEN > longestIntersect) {
-                        longestIntersect = INTERSECTLEN;
-                        longestIntersectWindow = &w;
-                    }
-                }
-                break;
-            case 'b':
-            case 'd':
-                if (STICKS(POSA.y + SIZEA.y, POSB.y)) {
-                    const auto INTERSECTLEN = std::max((double)0, std::min(POSA.x + SIZEA.x, POSB.x + SIZEB.x) - std::max(POSA.x, POSB.x));
-                    if (INTERSECTLEN > longestIntersect) {
-                        longestIntersect = INTERSECTLEN;
-                        longestIntersectWindow = &w;
-                    }
-                }
-                break;
-        }
+    const auto current=getWindowFromDrawable(LastWindow);
+    if (!current) return nullptr;
+    HyprCore::FocusDirection direction;
+    if (dir=='l') direction=HyprCore::FocusDirection::Left;
+    else if (dir=='r') direction=HyprCore::FocusDirection::Right;
+    else if (dir=='u' || dir=='t') direction=HyprCore::FocusDirection::Up;
+    else if (dir=='d' || dir=='b') direction=HyprCore::FocusDirection::Down;
+    else return nullptr;
+    std::vector<HyprCore::FocusTarget> targets;
+    for (auto& window:windows) {
+        if (window.getDrawable()<=0 || window.getWorkspaceID()!=current->getWorkspaceID() || window.getIsFloating()!=current->getIsFloating()) continue;
+        const auto pos=window.getEffectivePosition(), size=window.getEffectiveSize();
+        targets.push_back({(uint64_t)window.getDrawable(),{(int)pos.x,(int)pos.y,(int)size.x,(int)size.y},!window.getDock() && !window.getNoInterventions() && !window.getDead(),true,false});
     }
-
-    if (longestIntersect != -1)
-        return longestIntersectWindow;
-
-    return nullptr;
+    const auto id=HyprCore::directionalFocus(targets,current->getDrawable(),direction,ConfigManager::getInt("focus_wrap")!=0);
+    return id?getWindowFromDrawable(*id):nullptr;
 }
 
 void CWindowManager::warpCursorTo(Vector2D to) {
@@ -2191,17 +2151,15 @@ void CWindowManager::getICCCMWMProtocols(CWindow* pWindow) {
 }
 
 void CWindowManager::refocusWindowOnClosed() {
-    const auto PWINDOW = findWindowAtCursor();
-
-    // No window or last window valid
-    if (!PWINDOW || getWindowFromDrawable(LastWindow)) {
-        setFocusedWindow(Screen->root);  //refocus on root
-        return;
+    if (const auto current=getWindowFromDrawable(LastWindow); current && !current->getDead() && isWorkspaceVisible(current->getWorkspaceID())) return;
+    std::vector<HyprCore::FocusTarget> targets;
+    for (auto& window:windows) {
+        if (window.getDrawable()<=0 || !isWorkspaceVisible(window.getWorkspaceID())) continue;
+        const auto pos=window.getEffectivePosition(),size=window.getEffectiveSize();
+        targets.push_back({(uint64_t)window.getDrawable(),{(int)pos.x,(int)pos.y,(int)size.x,(int)size.y},!window.getDock() && !window.getNoInterventions() && !window.getDead(),true,false});
     }
-
-    LastWindow = PWINDOW->getDrawable();
-
-    setFocusedWindow(PWINDOW->getDrawable());
+    const auto fallback=focusHistory.fallback(targets);
+    setFocusedWindow(fallback?static_cast<xcb_drawable_t>(*fallback):Screen->root);
 }
 
 void CWindowManager::recalcAllWorkspaces() {

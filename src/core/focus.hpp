@@ -73,10 +73,9 @@ public:
         return true;
     }
     bool forget(FocusWindowId id) {
-        const auto found = std::find(history_.begin(), history_.end(), id);
-        if (found == history_.end()) return false;
-        history_.erase(found);
-        return true;
+        const auto oldSize=history_.size();
+        history_.erase(std::remove(history_.begin(),history_.end(),id),history_.end());
+        return history_.size()!=oldSize;
     }
     const std::vector<FocusWindowId>& entries() const { return history_; }
     std::optional<FocusWindowId> fallback(const std::vector<FocusTarget>& targets,

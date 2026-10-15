@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.hpp"
+#include "core/focus.hpp"
 #include "window.hpp"
 
 #include <vector>
@@ -45,6 +46,7 @@ public:
     std::deque<CWindow>         windows; // windows never left. It has always been hiding amongst us.
     std::deque<CWindow>         unmappedWindows;
     xcb_drawable_t              LastWindow = -1;
+    HyprCore::FocusHistory       focusHistory;
 
     // holds the objects representing every open workspace
     std::deque<CWorkspace>      workspaces;
