@@ -27,4 +27,9 @@ TEST(floating_bounds_support_monitors_left_of_the_origin) {
  CHECK(fitInside(Rect{-300,-20,300,100},Rect{-100,0,100,80})==Rect{-100,0,100,80});
  CHECK(fitInside(Rect{500,90,30,20},Rect{0,0,100,80})==Rect{70,60,30,20});
 }
+TEST(split_ratio_changes_are_bounded_and_nan_safe) {
+ CHECK(resizeSplitRatio(0.5,0.1)==0.6); CHECK(resizeSplitRatio(0.8,100)==0.9);
+ CHECK(resizeSplitRatio(0.2,-100)==0.1);
+ CHECK(resizeSplitRatio(std::numeric_limits<double>::quiet_NaN(),0)==0.5);
+}
 TEST_MAIN()

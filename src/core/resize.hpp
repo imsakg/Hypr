@@ -40,4 +40,10 @@ inline Rect fitInside(Rect r,Rect area) {
     r.y=saturatedInt(std::clamp(static_cast<long long>(r.y),static_cast<long long>(area.y),maxY));
     return r;
 }
+inline double resizeSplitRatio(double current,double delta,double minimum=0.1,double maximum=0.9) {
+    if (!std::isfinite(minimum) || !std::isfinite(maximum) || minimum<=0 || maximum>=1 || minimum>maximum) { minimum=0.1; maximum=0.9; }
+    if (!std::isfinite(current)) current=0.5;
+    if (!std::isfinite(delta)) delta=0;
+    return std::clamp(current+delta,minimum,maximum);
+}
 } // namespace HyprCore
