@@ -170,33 +170,43 @@ TEST(config_store_replaces_only_after_successful_parse) {
 }
 
 TEST(bindings_keep_shell_arguments_opaque_and_allow_unmodified_keys) {
-    const auto result = parseBinding(R"( SUPER , R , exec , printf '%s,%s' "a,b" c\,d )");
+    const auto result = parseConfigBinding(R"( SUPER , R , exec , printf '%s,%s' "a,b" c\,d )");
     CHECK(result.ok());
     CHECK(result.binding->modifiers == "SUPER");
     CHECK(result.binding->key == "R");
     CHECK(result.binding->dispatcher == "exec");
     CHECK(result.binding->argument == R"(printf '%s,%s' "a,b" c\,d)");
-    CHECK(parseBinding(",F1,killactive,").ok());
-    CHECK(!parseBinding("SUPER,R,exec").ok());
-    CHECK(!parseBinding("SUPER,,exec,xterm").ok());
-    CHECK(!parseBinding("SUPER,R,,xterm").ok());
-    CHECK(!parseBinding("\"open,R,exec,xterm").ok());
+    CHECK(parseConfigBinding(",F1,killactive,").ok());
+    CHECK(!parseConfigBinding("SUPER,R,exec").ok());
+    CHECK(!parseConfigBinding("SUPER,,exec,xterm").ok());
+    CHECK(!parseConfigBinding("SUPER,R,,xterm").ok());
+    CHECK(!parseConfigBinding("\"open,R,exec,xterm").ok());
 }
 
 TEST(binding_validation_is_fail_closed_and_source_aware) {
-    CHECK(!parseBinding("SUPER,R,unknown,x").ok());
-    CHECK(!parseBinding("SUPER,R,exec,").ok());
-    CHECK(!parseBinding("SUPER,R,killactive,extra").ok());
-    CHECK(!parseBinding("SUPER,R,exec,\"unfinished").ok());
-    const auto valid = parseBindings(parseConfig("bind=,F1,killactive,\nbind=SUPER,R,exec,xterm\n"));
+    CHECK(!parseConfigBinding("SUPER,R,unknown,x").ok());
+    CHECK(!parseConfigBinding("SUPER,R,exec,").ok());
+    CHECK(!parseConfigBinding("SUPER,R,killactive,extra").ok());
+    CHECK(!parseConfigBinding("SUPER,R,exec,\"unfinished").ok());
+    const auto valid = parseConfigBindings(parseConfig("bind=,F1,killactive,\nbind=SUPER,R,exec,xterm\n"));
     CHECK(valid.ok());
     CHECK(valid.bindings.size() == 2);
     CHECK(valid.bindings[1].line == 2);
-    const auto invalid = parseBindings(parseConfig("bind=SUPER,R,exec,xterm\nbind=SUPER,Q,bogus,\n"));
+    const auto invalid = parseConfigBindings(parseConfig("bind=SUPER,R,exec,xterm\nbind=SUPER,Q,bogus,\n"));
     CHECK(!invalid.ok());
     CHECK(invalid.bindings.empty());
     CHECK(invalid.errors[0].line == 2);
-    CHECK(!parseBindings(parseConfig("missing equals\n")).ok());
+    CHECK(!parseConfigBindings(parseConfig("missing equals\n")).ok());
+}
+
+TEST(config_binding_records_have_config_specific_public_names) {
+    const ConfigBindingParseResult one = parseConfigBinding(",F1,killactive,");
+    CHECK(one.ok());
+    const ConfigBinding binding = *one.binding;
+    CHECK(binding.key == "F1");
+    const ConfigBindingList many = parseConfigBindings(parseConfig("bind=,F1,killactive,\n"));
+    CHECK(many.ok());
+    CHECK(many.bindings.size() == 1);
 }
 
 TEST_MAIN()

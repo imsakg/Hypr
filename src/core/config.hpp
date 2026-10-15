@@ -278,7 +278,7 @@ private:
     std::vector<ConfigError> errors_;
 };
 
-struct Binding {
+struct ConfigBinding {
     std::string modifiers;
     std::string key;
     std::string dispatcher;
@@ -286,13 +286,13 @@ struct Binding {
     std::size_t line = 0;
 };
 
-struct BindingParseResult {
-    std::optional<Binding> binding;
+struct ConfigBindingParseResult {
+    std::optional<ConfigBinding> binding;
     std::string error;
     bool ok() const { return binding.has_value(); }
 };
 
-inline BindingParseResult parseBinding(const std::string& text) {
+inline ConfigBindingParseResult parseConfigBinding(const std::string& text) {
     if (!configQuotesClosed(text)) return {std::nullopt, "unclosed quote in binding"};
     std::vector<std::string> fields;
     try { fields = splitFields(text, 4); }
@@ -307,20 +307,20 @@ inline BindingParseResult parseBinding(const std::string& text) {
     if (fields[2] == "exec" && fields[3].empty()) return {std::nullopt, "exec requires a command"};
     for (const auto* name : {"killactive", "fullscreen", "lastworkspace", "togglefloating", "pseudo"})
         if (fields[2] == name && !fields[3].empty()) return {std::nullopt, "dispatcher does not take an argument"};
-    return {Binding{fields[0], fields[1], fields[2], fields[3], 0}, ""};
+    return {ConfigBinding{fields[0], fields[1], fields[2], fields[3], 0}, ""};
 }
 
-struct BindingList {
-    std::vector<Binding> bindings;
+struct ConfigBindingList {
+    std::vector<ConfigBinding> bindings;
     std::vector<ConfigError> errors;
     bool ok() const { return errors.empty(); }
 };
 
-inline BindingList parseBindings(const ConfigDocument& document) {
-    BindingList result;
+inline ConfigBindingList parseConfigBindings(const ConfigDocument& document) {
+    ConfigBindingList result;
     result.errors = document.errors;
     for (const auto& entry : document.all("bind")) {
-        auto parsed = parseBinding(entry.value);
+        auto parsed = parseConfigBinding(entry.value);
         if (!parsed.ok()) result.errors.push_back({entry.line, parsed.error});
         else {
             parsed.binding->line = entry.line;
