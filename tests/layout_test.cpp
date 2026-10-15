@@ -73,4 +73,9 @@ TEST(weighted_windows_receive_proportional_space) {
  const auto rows=tileWeighted(Rect{0,0,100,80},{1,3},false);
  CHECK(rows[0].height==20); CHECK(rows[1].y==20);
 }
+TEST(invalid_weights_never_produce_nan_or_negative_cells) {
+ const auto cells=tileWeighted(Rect{0,0,100,20},{0,-2,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()});
+ CHECK(cells[0].width==25); CHECK(cells[3].x+cells[3].width==100);
+ CHECK(tileWeighted(Rect{0,0,100,20},{1e300,1e300})[0].width==50);
+}
 TEST_MAIN()
