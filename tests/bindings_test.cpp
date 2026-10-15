@@ -100,4 +100,15 @@ TEST(named_punctuation_includes_delimiter_safe_aliases) {
     CHECK(parseKeysym("quoteright") == parseKeysym("apostrophe"));
     CHECK(!parseKeysym("comma;echo nope"));
 }
+TEST(binding_fields_are_validated_before_a_value_is_returned) {
+    const auto binding = parseBinding(" SUPER SHIFT , Return , togglefloating ");
+    CHECK(binding);
+    CHECK(binding->modifiers == (ModSuper | ModShift));
+    CHECK(binding->key == 0xff0du);
+    CHECK(binding->action == "togglefloating");
+    CHECK(binding->argument.empty());
+    CHECK(parseBinding(",q,close"));
+    for (const auto* text : {"", "SUPER,q", "SUPER,,exec", "SUPER,q,", "BOGUS,q,exec", "SUPER,unknown,exec", "SUPER,q,exec junk", "SUPER,q,;exec"})
+        CHECK(!parseBinding(text));
+}
 TEST_MAIN()

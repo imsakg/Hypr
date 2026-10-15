@@ -124,4 +124,36 @@ inline std::optional<KeySym> parseKeysym(std::string_view text) {
     }
     return std::nullopt;
 }
+
+struct Binding {
+    ModifierMask modifiers = 0;
+    KeySym key = 0;
+    std::string action;
+    std::string argument;
+};
+
+namespace BindingDetail {
+inline bool actionName(std::string_view name) {
+    if (name.empty()) return false;
+    const auto letter = [](char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); };
+    if (!letter(name.front())) return false;
+    for (const char c : name)
+        if (!letter(c) && !(c >= '0' && c <= '9') && c != '_' && c != '-') return false;
+    return true;
+}
+}
+
+// Parses the value after `bind =`; action names are data, not an execution whitelist.
+inline std::optional<Binding> parseBinding(std::string_view text) {
+    const auto first = text.find(',');
+    if (first == std::string_view::npos) return std::nullopt;
+    const auto second = text.find(',', first + 1);
+    if (second == std::string_view::npos) return std::nullopt;
+    const auto modifiers = parseModifiers(text.substr(0, first));
+    const auto keyText = BindingDetail::trim(text.substr(first + 1, second - first - 1));
+    const auto key = parseKeysym(keyText);
+    const auto action = BindingDetail::trim(text.substr(second + 1));
+    if (!modifiers || !key || !BindingDetail::actionName(action)) return std::nullopt;
+    return Binding{*modifiers, *key, std::string(action), {}};
+}
 }
