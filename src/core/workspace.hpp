@@ -68,6 +68,20 @@ public:
         if (!it->second.focused) it->second.focused = window;
         return true;
     }
+    bool setUrgent(WorkspaceWindowId window, bool urgent) {
+        if (!workspaceOf(window)) return false;
+        if (urgent) urgent_.insert(window);
+        else urgent_.erase(window);
+        return true;
+    }
+    bool isUrgent(WorkspaceWindowId window) const { return urgent_.count(window) != 0; }
+    std::vector<WorkspaceWindowId> urgentWindows(WorkspaceId id) const {
+        std::vector<WorkspaceWindowId> result;
+        const auto* local = workspace(id);
+        if (local) for (const auto window : local->windows)
+            if (isUrgent(window)) result.push_back(window);
+        return result;
+    }
     bool setSticky(WorkspaceWindowId window, bool sticky) {
         if (!workspaceOf(window)) return false;
         if (sticky) sticky_.insert(window);
@@ -101,6 +115,7 @@ public:
         if (!home) return false;
         detach(workspaces_.at(*home), window);
         sticky_.erase(window);
+        urgent_.erase(window);
         return true;
     }
     std::optional<WorkspaceWindowId> focused() const {
@@ -110,6 +125,7 @@ public:
         const auto home = workspaceOf(window);
         if (!home || home != active_) return false;
         workspaces_.at(*home).focused = window;
+        urgent_.erase(window);
         return true;
     }
     std::optional<WorkspaceId> active() const { return active_; }
@@ -120,6 +136,8 @@ public:
             last_ = active_;
             active_ = id;
         }
+        const auto selected = workspaces_.at(id).focused;
+        if (selected) urgent_.erase(*selected);
         return true;
     }
     bool toggleLast() { return last_ && activate(*last_); }
@@ -170,6 +188,7 @@ private:
             std::nullopt : std::optional<WorkspaceWindowId>{source.windows.front()};
     }
     std::set<WorkspaceWindowId> sticky_;
+    std::set<WorkspaceWindowId> urgent_;
     std::map<WorkspaceId, Workspace> workspaces_;
     std::optional<WorkspaceId> active_;
     std::optional<WorkspaceId> last_;

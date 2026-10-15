@@ -200,4 +200,26 @@ TEST(sticky_visibility_does_not_duplicate_or_transfer_ownership) {
     state.addWindow(1, 10);
     CHECK(!state.isSticky(10));
 }
+TEST(urgency_tracks_live_members_and_clears_when_the_window_receives_focus) {
+    WorkspaceState state;
+    state.addWorkspace(1); state.addWorkspace(2);
+    state.addWindow(1, 10); state.addWindow(1, 11); state.addWindow(2, 20);
+    CHECK(!state.setUrgent(0, true));
+    CHECK(!state.setUrgent(99, true));
+    CHECK(state.setUrgent(11, true));
+    CHECK(state.setUrgent(20, true));
+    CHECK(state.urgentWindows(1) == std::vector<WorkspaceWindowId>{11});
+    CHECK(state.urgentWindows(99).empty());
+    CHECK(!state.focusWindow(20) && state.isUrgent(20));
+    CHECK(state.focusWindow(11) && !state.isUrgent(11));
+    CHECK(state.activate(2) && !state.isUrgent(20));
+    CHECK(state.setUrgent(11, true));
+    CHECK(state.moveWindow(11, 2));
+    CHECK(state.isUrgent(11));
+    CHECK(state.urgentWindows(2) == std::vector<WorkspaceWindowId>{11});
+    CHECK(state.setUrgent(11, false) && !state.isUrgent(11));
+    state.setUrgent(11, true);
+    CHECK(state.removeWindow(11) && !state.isUrgent(11));
+    CHECK(state.addWindow(1, 11) && !state.isUrgent(11));
+}
 TEST_MAIN()
