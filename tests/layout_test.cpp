@@ -59,4 +59,9 @@ TEST(reverse_layout_changes_placement_not_client_data) {
  const auto cells=arrange(Rect{0,0,100,80},{{1,false,false,false},{2,false,false,false}},o);
  CHECK(cells[0].id==2); CHECK(cells[1].id==1);
 }
+TEST(smart_gaps_expand_only_single_client_workspaces) {
+ LayoutOptions o; o.smartGaps=true; o.outerGap=10;
+ CHECK(tile(Rect{0,0,100,80},1,o)[0]==Rect{0,0,100,80});
+ CHECK(tile(Rect{0,0,100,80},2,o)[0].x==10);
+}
 TEST_MAIN()
