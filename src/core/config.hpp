@@ -222,6 +222,10 @@ inline ConfigDocument parseConfig(const std::string& text) {
     std::vector<std::pair<std::string, std::size_t>> scopes;
     while (std::getline(stream, line)) {
         ++lineNumber;
+        if (line.find('\0') != std::string::npos) {
+            document.errors.push_back({lineNumber, "embedded NUL byte"});
+            continue;
+        }
         line = trim(stripComment(line));
         if (line.empty()) continue;
         if (!configQuotesClosed(line)) {
@@ -293,6 +297,7 @@ struct ConfigBindingParseResult {
 };
 
 inline ConfigBindingParseResult parseConfigBinding(const std::string& text) {
+    if (text.find('\0') != std::string::npos) return {std::nullopt, "embedded NUL byte in binding"};
     if (!configQuotesClosed(text)) return {std::nullopt, "unclosed quote in binding"};
     std::vector<std::string> fields;
     try { fields = splitFields(text, 4); }

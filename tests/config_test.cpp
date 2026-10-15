@@ -224,4 +224,22 @@ TEST(binding_dispatcher_arguments_are_validated_without_rewriting_commands) {
     CHECK(invalid.errors[0].line == 1 && invalid.errors[1].line == 2);
 }
 
+TEST(embedded_nul_bytes_are_source_errors_and_cannot_replace_live_config) {
+    const std::string nul(1, '\0');
+    const auto doc = parseConfig("count=1\nvalue=before" + nul + "after\ncount=2\n");
+    CHECK(!doc.ok());
+    CHECK(doc.errors.size() == 1);
+    CHECK(doc.errors[0].line == 2);
+    CHECK(doc.errors[0].message.find("NUL") != std::string::npos);
+    CHECK(doc.entries.size() == 2);
+    CHECK(!doc.value("value"));
+    CHECK(!parseConfig("# comment" + nul + "hidden\n").ok());
+    CHECK(!parseConfigBinding(",R,exec,before" + nul + "after").ok());
+    CHECK(!parseConfigBinding("SU" + nul + "PER,R,exec,xterm").ok());
+    ConfigStore store;
+    CHECK(store.load("count=7\n"));
+    CHECK(!store.load("count=8\n# " + nul + "\n"));
+    CHECK(store.document().integer("count") == 7);
+}
+
 TEST_MAIN()

@@ -194,4 +194,17 @@ TEST(config_rule_store_reloads_document_bindings_and_rules_as_one_snapshot) {
     CHECK(store.errors().empty());
 }
 
+TEST(embedded_nul_rule_patterns_fail_before_regex_compilation_and_reload) {
+    const std::string nul(1, '\0');
+    const auto direct = parseRule("float,class:before" + nul + "after");
+    CHECK(!direct.ok());
+    CHECK(direct.error.find("NUL") != std::string::npos);
+    CHECK(!parseRuleAction("pseudo" + nul).ok());
+    RuleConfigStore store;
+    CHECK(store.load("windowrule=float,class:term\n"));
+    CHECK(!store.load("windowrule=tile,class:before" + nul + "after\n"));
+    CHECK(store.errors().size() == 1 && store.errors()[0].line == 1);
+    CHECK(store.snapshot().rules.resolve({"term", "", ""}).floating == true);
+}
+
 TEST_MAIN()

@@ -26,6 +26,7 @@ struct ActionParseResult {
 };
 
 inline ActionParseResult parseRuleAction(const std::string& input) {
+    if (input.find('\0') != std::string::npos) return {std::nullopt, "embedded NUL byte in rule action"};
     const auto text = trim(input);
     if (text == "float") return {RuleAction{RuleActionType::Float, 0, 0, true}, ""};
     if (text == "tile") return {RuleAction{RuleActionType::Tile, 0, 0, true}, ""};
@@ -114,6 +115,7 @@ inline std::size_t ruleConditionSeparator(const std::string& text, std::size_t f
 }
 
 inline RuleParseResult parseRule(const std::string& input, std::size_t line = 0) {
+    if (input.find('\0') != std::string::npos) return {std::nullopt, "embedded NUL byte in rule"};
     const auto comma = input.find(',');
     if (comma == std::string::npos) return {std::nullopt, "expected action,condition"};
     const auto action = parseRuleAction(input.substr(0, comma));
