@@ -307,6 +307,16 @@ inline ConfigBindingParseResult parseConfigBinding(const std::string& text) {
     if (fields[2] == "exec" && fields[3].empty()) return {std::nullopt, "exec requires a command"};
     for (const auto* name : {"killactive", "fullscreen", "lastworkspace", "togglefloating", "pseudo"})
         if (fields[2] == name && !fields[3].empty()) return {std::nullopt, "dispatcher does not take an argument"};
+    if (fields[2] == "movewindow" || fields[2] == "movefocus") {
+        if (fields[3] != "l" && fields[3] != "r" && fields[3] != "u" && fields[3] != "d")
+            return {std::nullopt, "direction must be exactly l, r, u, or d"};
+    }
+    if (fields[2] == "workspace" || fields[2] == "movetoworkspace") {
+        const auto id = parseInteger(fields[3]);
+        if (!id || *id <= 0) return {std::nullopt, "workspace must be a positive integer"};
+    }
+    if (fields[2] == "splitratio" && fields[3] != "+" && fields[3] != "-")
+        return {std::nullopt, "splitratio expects exactly + or -"};
     return {ConfigBinding{fields[0], fields[1], fields[2], fields[3], 0}, ""};
 }
 

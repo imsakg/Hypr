@@ -209,4 +209,19 @@ TEST(config_binding_records_have_config_specific_public_names) {
     CHECK(many.bindings.size() == 1);
 }
 
+TEST(binding_dispatcher_arguments_are_validated_without_rewriting_commands) {
+    for (const auto* text : {",H,movefocus,l", ",H,movewindow,r", ",H,movefocus,u", ",H,movewindow,d", ",1,workspace,1", ",1,movetoworkspace,+2", ",1,workspace,2147483647", ",equal,splitratio,+", ",minus,splitratio,-"})
+        CHECK(parseConfigBinding(text).ok());
+    for (const auto* text : {",H,movefocus,", ",H,movewindow,", ",H,movefocus,left", ",H,movewindow,x", ",H,movefocus,l trailing", ",1,workspace,", ",1,workspace,0", ",1,workspace,-1", ",1,movetoworkspace,2tail", ",1,workspace,2147483648", ",1,movetoworkspace,1 2", ",equal,splitratio,", ",equal,splitratio,++", ",equal,splitratio,0.1"})
+        CHECK(!parseConfigBinding(text).ok());
+    const auto command = parseConfigBinding(R"(,R,exec,printf '%s,%s' "l trailing" '0.1')");
+    CHECK(command.ok());
+    CHECK(command.binding->argument == R"(printf '%s,%s' "l trailing" '0.1')");
+    const auto invalid = parseConfigBindings(parseConfig("bind=,H,movefocus,\nbind=,1,workspace,0\n"));
+    CHECK(!invalid.ok());
+    CHECK(invalid.bindings.empty());
+    CHECK(invalid.errors.size() == 2);
+    CHECK(invalid.errors[0].line == 1 && invalid.errors[1].line == 2);
+}
+
 TEST_MAIN()
