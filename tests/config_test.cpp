@@ -125,4 +125,16 @@ TEST(malformed_categories_report_source_lines_without_crashing) {
     CHECK(parseConfig("key=brace } in value\n").ok());
 }
 
+TEST(unclosed_quotes_are_line_errors_and_comments_do_not_open_quotes) {
+    const auto doc = parseConfig("bad=\"unfinished # still quoted\ngood=1 # 'not a quote\nbad2='open\n");
+    CHECK(!doc.ok());
+    CHECK(doc.errors.size() == 2);
+    CHECK(doc.errors[0].line == 1);
+    CHECK(doc.errors[1].line == 3);
+    CHECK(doc.entries.size() == 1);
+    CHECK(doc.entries[0].key == "good");
+    CHECK(parseConfig(R"(value="a\"b#c" # ignored)").ok());
+    CHECK(parseConfig("path=trailing\\").ok());
+}
+
 TEST_MAIN()

@@ -175,6 +175,18 @@ inline std::size_t configFindUnquoted(const std::string& text, char delimiter) {
     return std::string::npos;
 }
 
+inline bool configQuotesClosed(const std::string& text) {
+    char quote = 0;
+    bool escaped = false;
+    for (char c : text) {
+        if (escaped) { escaped = false; continue; }
+        if (c == '\\') { escaped = true; continue; }
+        if (quote) { if (c == quote) quote = 0; }
+        else if (c == '\'' || c == '"') quote = c;
+    }
+    return quote == 0;
+}
+
 inline ConfigDocument parseConfig(const std::string& text) {
     ConfigDocument document;
     std::istringstream stream(text);
@@ -185,6 +197,10 @@ inline ConfigDocument parseConfig(const std::string& text) {
         ++lineNumber;
         line = trim(stripComment(line));
         if (line.empty()) continue;
+        if (!configQuotesClosed(line)) {
+            document.errors.push_back({lineNumber, "unclosed quote"});
+            continue;
+        }
         const auto equal = configFindUnquoted(line, '=');
         if (line == "}") {
             if (scopes.empty()) document.errors.push_back({lineNumber, "unexpected closing category"});
