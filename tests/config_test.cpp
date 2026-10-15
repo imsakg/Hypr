@@ -137,4 +137,20 @@ TEST(unclosed_quotes_are_line_errors_and_comments_do_not_open_quotes) {
     CHECK(parseConfig("path=trailing\\").ok());
 }
 
+TEST(repeated_directives_survive_and_scalar_lookup_is_last_wins) {
+    const auto doc = parseConfig("exec=first\ncount=1\nexec=second\ncount=-0x2\nspeed=2.5\nenabled=off\nempty=\n");
+    CHECK(doc.all("exec").size() == 2);
+    CHECK(doc.all("exec")[0].value == "first");
+    CHECK(doc.all("exec")[1].line == 3);
+    CHECK(doc.integer("count") == -2);
+    CHECK(doc.real("speed") == 2.5);
+    CHECK(doc.boolean("enabled") == false);
+    CHECK(doc.value("empty") == "");
+    CHECK(!doc.value("missing"));
+    CHECK(!doc.integer("exec"));
+    CHECK(doc.last("count")->line == 4);
+    CHECK(doc.last("missing") == nullptr);
+    CHECK(parseConfig("n=3\nn=bad\n").integer("n") == std::nullopt);
+}
+
 TEST_MAIN()

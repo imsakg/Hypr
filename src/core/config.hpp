@@ -150,6 +150,33 @@ struct ConfigDocument {
     std::vector<ConfigEntry> entries;
     std::vector<ConfigError> errors;
     bool ok() const { return errors.empty(); }
+    const ConfigEntry* last(const std::string& qualifiedKey) const {
+        for (auto it = entries.rbegin(); it != entries.rend(); ++it)
+            if (it->qualifiedKey() == qualifiedKey) return &*it;
+        return nullptr;
+    }
+    std::vector<ConfigEntry> all(const std::string& qualifiedKey) const {
+        std::vector<ConfigEntry> result;
+        for (const auto& entry : entries)
+            if (entry.qualifiedKey() == qualifiedKey) result.push_back(entry);
+        return result;
+    }
+    std::optional<std::string> value(const std::string& key) const {
+        const auto* entry = last(key);
+        return entry ? std::optional<std::string>(entry->value) : std::nullopt;
+    }
+    std::optional<int> integer(const std::string& key) const {
+        const auto* entry = last(key);
+        return entry ? parseInteger(entry->value) : std::nullopt;
+    }
+    std::optional<double> real(const std::string& key) const {
+        const auto* entry = last(key);
+        return entry ? parseReal(entry->value) : std::nullopt;
+    }
+    std::optional<bool> boolean(const std::string& key) const {
+        const auto* entry = last(key);
+        return entry ? parseBoolean(entry->value) : std::nullopt;
+    }
 };
 
 inline bool configIdentifier(const std::string& text) {
