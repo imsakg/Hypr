@@ -150,6 +150,29 @@ struct ConfigDocument {
     bool ok() const { return errors.empty(); }
 };
 
+inline bool configIdentifier(const std::string& text) {
+    if (text.empty()) return false;
+    for (char c : text) {
+        if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') &&
+            c != '_' && c != '-' && c != '.' && c != ':') return false;
+    }
+    return true;
+}
+
+inline std::size_t configFindUnquoted(const std::string& text, char delimiter) {
+    char quote = 0;
+    bool escaped = false;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (escaped) { escaped = false; continue; }
+        if (c == '\\') { escaped = true; continue; }
+        if (quote) { if (c == quote) quote = 0; }
+        else if (c == '\'' || c == '"') quote = c;
+        else if (c == delimiter) return i;
+    }
+    return std::string::npos;
+}
+
 inline ConfigDocument parseConfig(const std::string& text) {
     ConfigDocument document;
     std::istringstream stream(text);
@@ -159,12 +182,17 @@ inline ConfigDocument parseConfig(const std::string& text) {
         ++lineNumber;
         line = trim(stripComment(line));
         if (line.empty()) continue;
-        const auto equal = line.find('=');
+        const auto equal = configFindUnquoted(line, '=');
         if (equal == std::string::npos) {
             document.errors.push_back({lineNumber, "expected key=value"});
             continue;
         }
-        document.entries.push_back({"", line.substr(0, equal), trim(line.substr(equal + 1)), lineNumber});
+        const auto key = trim(line.substr(0, equal));
+        if (!configIdentifier(key)) {
+            document.errors.push_back({lineNumber, "invalid or empty key"});
+            continue;
+        }
+        document.entries.push_back({"", key, trim(line.substr(equal + 1)), lineNumber});
     }
     return document;
 }

@@ -88,4 +88,16 @@ TEST(flat_documents_parse_blank_comments_and_assignments) {
     CHECK(parseConfig(" \t\n# blank\n").ok());
 }
 
+TEST(assignments_trim_keys_and_keep_value_syntax_and_source_lines) {
+    const auto doc = parseConfig("\n  gaps_in \t= 5 \ncommand = printf \"a=b#c\" = tail\nempty =\n");
+    CHECK(doc.ok());
+    CHECK(doc.entries[0].key == "gaps_in");
+    CHECK(doc.entries[0].line == 2);
+    CHECK(doc.entries[1].value == "printf \"a=b#c\" = tail");
+    CHECK(doc.entries[2].value.empty());
+    CHECK(!parseConfig("=missing\n").ok());
+    CHECK(!parseConfig("not a key=value\n").ok());
+    CHECK(!parseConfig("\"not=a\"=value\n").ok());
+}
+
 TEST_MAIN()
