@@ -11,7 +11,7 @@ struct WindowProperties {
     std::string title;
 };
 
-enum class RuleActionType { Float, Tile };
+enum class RuleActionType { Float, Tile, Pseudo, NoInterventions };
 struct RuleAction {
     RuleActionType type = RuleActionType::Float;
     int first = 0;
@@ -28,6 +28,17 @@ inline ActionParseResult parseRuleAction(const std::string& input) {
     const auto text = trim(input);
     if (text == "float") return {RuleAction{RuleActionType::Float, 0, 0, true}, ""};
     if (text == "tile") return {RuleAction{RuleActionType::Tile, 0, 0, true}, ""};
+    std::istringstream stream(text);
+    stream.imbue(std::locale::classic());
+    std::vector<std::string> words;
+    std::string word;
+    while (stream >> word) words.push_back(word);
+    if (!words.empty() && (words[0] == "pseudo" || words[0] == "nointerventions")) {
+        const auto enabled = words.size() == 1 ? std::optional<bool>(true) : parseBoolean(words[1]);
+        if (words.size() > 2 || !enabled) return {std::nullopt, "flag action expects one optional boolean"};
+        const auto type = words[0] == "pseudo" ? RuleActionType::Pseudo : RuleActionType::NoInterventions;
+        return {RuleAction{type, 0, 0, *enabled}, ""};
+    }
     return {std::nullopt, "unknown or malformed rule action: " + text};
 }
 

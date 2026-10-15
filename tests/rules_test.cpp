@@ -40,4 +40,15 @@ TEST(invalid_or_missing_regexes_never_create_matching_rules) {
     CHECK(valid.rule->matches({"", "", ""}));
 }
 
+TEST(flag_actions_are_exact_and_validate_optional_booleans) {
+    CHECK(parseRuleAction("pseudo").ok());
+    CHECK(parseRuleAction("pseudo").action->type == RuleActionType::Pseudo);
+    CHECK(parseRuleAction("nointerventions").action->enabled);
+    CHECK(!parseRuleAction("pseudo off").action->enabled);
+    CHECK(parseRuleAction(" nointerventions TRUE ").action->enabled);
+    CHECK(parseRule("pseudo,class:discord").ok());
+    for (const auto* action : {"", "floating", "float 1", "tile extra", "pseudojunk", "pseudo maybe", "pseudo on tail", "nointerventionsXYZ"})
+        CHECK(!parseRuleAction(action).ok());
+}
+
 TEST_MAIN()
