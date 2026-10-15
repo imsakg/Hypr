@@ -9,7 +9,7 @@
 #include <vector>
 namespace HyprCore {
 enum class LayoutKind { Horizontal, Vertical, Folded };
-struct LayoutOptions { LayoutKind kind = LayoutKind::Horizontal; int innerGap = 0; };
+struct LayoutOptions { LayoutKind kind = LayoutKind::Horizontal; int innerGap = 0; int outerGap = 0; };
 // Returns one cell per client; callers must keep membership ordering stable.
 inline std::vector<Rect> splitAxis(Rect area, std::size_t count, bool horizontal, int gap = 0) {
     if (count > 65536) throw std::length_error("too many layout clients");
@@ -34,6 +34,7 @@ inline std::vector<Rect> splitAxis(Rect area, std::size_t count, bool horizontal
 }
 // Layout internals.
 inline std::vector<Rect> tile(Rect area, std::size_t count, LayoutOptions options = {}) {
+    area = inset(area,options.outerGap);
     return splitAxis(area,count,options.kind != LayoutKind::Vertical,options.innerGap);
 }
 } // namespace HyprCore
