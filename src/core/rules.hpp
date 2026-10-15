@@ -147,4 +147,29 @@ inline RuleParseResult parseRule(const std::string& input, std::size_t line = 0)
     return {std::move(rule), ""};
 }
 
+struct RuleSet {
+    std::vector<Rule> rules;
+    std::vector<ConfigError> errors;
+    bool ok() const { return errors.empty(); }
+    // Returned pointers remain valid only while this unchanged set is alive.
+    std::vector<const Rule*> matching(const WindowProperties& window) const {
+        std::vector<const Rule*> result;
+        if (!ok()) return result;
+        for (const auto& rule : rules) if (rule.matches(window)) result.push_back(&rule);
+        return result;
+    }
+};
+
+inline RuleSet parseRules(const ConfigDocument& document) {
+    RuleSet result;
+    result.errors = document.errors;
+    for (const auto& entry : document.all("windowrule")) {
+        auto parsed = parseRule(entry.value, entry.line);
+        if (!parsed.ok()) result.errors.push_back({entry.line, parsed.error});
+        else result.rules.push_back(std::move(*parsed.rule));
+    }
+    if (!result.ok()) result.rules.clear();
+    return result;
+}
+
 } // namespace HyprCore

@@ -108,4 +108,30 @@ TEST(negated_selectors_invert_only_successfully_compiled_regex_matches) {
         CHECK(!parseRule(text).ok());
 }
 
+TEST(rule_sets_compile_in_source_order_with_fail_closed_line_diagnostics) {
+    const auto valid = parseRules(parseConfig("# heading\nwindowrule=float,class:term\nignored=1\nwindowrule=pseudo,title:Edit\n"));
+    CHECK(valid.ok());
+    CHECK(valid.rules.size() == 2);
+    CHECK(valid.rules[0].line() == 2);
+    CHECK(valid.rules[1].line() == 4);
+    const auto matches = valid.matching({"term", "", "Editor"});
+    CHECK(matches.size() == 2);
+    CHECK(matches[0]->action().type == RuleActionType::Float);
+    CHECK(matches[1]->action().type == RuleActionType::Pseudo);
+    CHECK(valid.matching({"other", "", "Other"}).empty());
+    CHECK(parseRules(parseConfig("")).ok());
+    const auto invalid = parseRules(parseConfig("windowrule=float,class:term\nwindowrule=size 0 5,class:.*\nwindowrule=tile,title:[\n"));
+    CHECK(!invalid.ok());
+    CHECK(invalid.rules.empty());
+    CHECK(invalid.errors.size() == 2);
+    CHECK(invalid.errors[0].line == 2);
+    CHECK(invalid.errors[1].line == 3);
+    CHECK(!invalid.errors[0].message.empty());
+    const auto syntax = parseRules(parseConfig("missing equals\nwindowrule=float,class:term\n"));
+    CHECK(!syntax.ok());
+    CHECK(syntax.rules.empty());
+    CHECK(syntax.errors[0].line == 1);
+    CHECK(parseRules(parseConfig("bar {\nwindowrule=not a top-level rule\n}\n")).rules.empty());
+}
+
 TEST_MAIN()
