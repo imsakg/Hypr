@@ -9,7 +9,7 @@
 
 Keybind* KeybindManager::findKeybindByKey(int mod, xcb_keysym_t keysym) {
     for(auto& key : KeybindManager::keybinds) {
-        if (keysym == key.getKeysym() && mod == key.getMod()) {
+        if (keysym == key.getKeysym() && HyprCore::modifiersMatch(key.getMod(),mod)) {
             return &key;
         }
     }
@@ -32,10 +32,13 @@ xcb_keysym_t KeybindManager::getKeysymFromKeycode(xcb_keycode_t keycode) {
 }
 
 xcb_keycode_t KeybindManager::getKeycodeFromKeysym(xcb_keysym_t keysym) {
-    const auto KEYSYMS = xcb_key_symbols_alloc(g_pWindowManager->DisplayConnection);
-    const auto KEYCODE = (!(KEYSYMS) ? NULL : xcb_key_symbols_get_keycode(KEYSYMS, keysym));
-    xcb_key_symbols_free(KEYSYMS);
-    return KEYCODE ? *KEYCODE : 0;
+    auto* symbols=xcb_key_symbols_alloc(g_pWindowManager->DisplayConnection);
+    if (!symbols) return 0;
+    auto* codes=xcb_key_symbols_get_keycode(symbols,keysym);
+    const auto result=codes?*codes:0;
+    free(codes);
+    xcb_key_symbols_free(symbols);
+    return result;
 }
 
 // Dispatchers

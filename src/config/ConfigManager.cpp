@@ -409,9 +409,10 @@ void ConfigManager::applyKeybindsToX() {
     xcb_ungrab_button(g_pWindowManager->DisplayConnection, XCB_GRAB_ANY, g_pWindowManager->Screen->root, XCB_MOD_MASK_ANY);
 
     for (auto& keybind : KeybindManager::keybinds) {
-        xcb_grab_key(g_pWindowManager->DisplayConnection, 1, g_pWindowManager->Screen->root,
-                     keybind.getMod(), KeybindManager::getKeycodeFromKeysym(keybind.getKeysym()),
-                     XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
+        const auto code=KeybindManager::getKeycodeFromKeysym(keybind.getKeysym());
+        if (!code) continue; // keycode zero means ANY, never grab it for a failed lookup.
+        for (const auto mask:HyprCore::grabVariants(keybind.getMod()))
+            xcb_grab_key(g_pWindowManager->DisplayConnection,1,g_pWindowManager->Screen->root,mask,code,XCB_GRAB_MODE_ASYNC,XCB_GRAB_MODE_ASYNC);
     }
 
     xcb_flush(g_pWindowManager->DisplayConnection);

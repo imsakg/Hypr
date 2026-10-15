@@ -28,4 +28,9 @@ TEST(runtime_key_adapters_preserve_old_configs_without_accepting_garbage) {
  CHECK(runtimeKeysym("Q")==static_cast<KeySym>('q')); CHECK(runtimeKeysym("equals")==static_cast<KeySym>('='));
  CHECK(!runtimeKeysym("$(touch /tmp/bad)"));
 }
+TEST(live_chords_ignore_lock_bits_but_not_extra_shortcut_modifiers) {
+ const auto super=*runtimeModifiers("SUPER");
+ CHECK(modifiersMatch(super,super|ModLock|Mod2)); CHECK(!modifiersMatch(super,super|ModShift));
+ CHECK(grabVariants(super).size()==4);
+}
 TEST_MAIN()
