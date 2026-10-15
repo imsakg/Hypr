@@ -33,4 +33,25 @@ TEST(directional_focus_ties_are_stable_under_input_permutations) {
     targets.push_back({9, {100, 0, 100, 100}});
     CHECK(directionalFocus(targets, 1, FocusDirection::Right) == 9);
 }
+TEST(focus_eligibility_excludes_hidden_unmapped_unfocusable_and_degenerate_targets) {
+    FocusTarget target{2, {100, 0, 50, 50}};
+    CHECK(focusEligible(target));
+    target.focusable = false; CHECK(!focusEligible(target)); target.focusable = true;
+    target.mapped = false; CHECK(!focusEligible(target)); target.mapped = true;
+    target.hidden = true; CHECK(!focusEligible(target)); target.hidden = false;
+    target.id = 0; CHECK(!focusEligible(target)); target.id = 2;
+    target.bounds.width = 0; CHECK(!focusEligible(target));
+    target.bounds.width = -1; CHECK(!focusEligible(target)); target.bounds.width = 50;
+    target.bounds.height = 0; CHECK(!focusEligible(target));
+    target.bounds.height = -1; CHECK(!focusEligible(target));
+    const std::vector<FocusTarget> targets{
+        {1, {0, 0, 50, 50}}, {2, {60, 0, 50, 50}, false},
+        {3, {70, 0, 50, 50}, true, false}, {4, {80, 0, 50, 50}, true, true, true},
+        {0, {90, 0, 50, 50}}, {5, {100, 0, 0, 50}}, {6, {110, 0, 50, 50}}};
+    CHECK(directionalFocus(targets, 1, FocusDirection::Right) == 6);
+    CHECK(!directionalFocus(targets, 2, FocusDirection::Right));
+    CHECK(!directionalFocus(targets, 3, FocusDirection::Right));
+    CHECK(!directionalFocus(targets, 4, FocusDirection::Right));
+    CHECK(!directionalFocus(targets, 5, FocusDirection::Right));
+}
 TEST_MAIN()

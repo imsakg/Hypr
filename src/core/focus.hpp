@@ -12,7 +12,14 @@ enum class FocusDirection { Left, Right, Up, Down };
 struct FocusTarget {
     FocusWindowId id = 0;
     Rect bounds;
+    bool focusable = true;
+    bool mapped = true;
+    bool hidden = false;
 };
+inline bool focusEligible(const FocusTarget& target) {
+    return target.id && target.focusable && target.mapped && !target.hidden &&
+           target.bounds.width > 0 && target.bounds.height > 0;
+}
 
 namespace FocusDetail {
 struct Axis { bool horizontal; int sign; };
@@ -24,9 +31,6 @@ inline std::optional<Axis> axis(FocusDirection direction) {
         case FocusDirection::Down: return Axis{false, 1};
     }
     return std::nullopt;
-}
-inline bool valid(const FocusTarget& target) {
-    return target.id && target.bounds.width > 0 && target.bounds.height > 0;
 }
 // Doubled centers retain half-pixel precision without floating point or int overflow.
 inline long long center(const Rect& bounds, bool horizontal) {
@@ -49,12 +53,12 @@ inline std::optional<FocusWindowId> directionalFocus(const std::vector<FocusTarg
     if (!axis) return std::nullopt;
     const auto source = std::find_if(targets.begin(), targets.end(),
         [current](const FocusTarget& target) { return target.id == current; });
-    if (source == targets.end() || !FocusDetail::valid(*source)) return std::nullopt;
+    if (source == targets.end() || !focusEligible(*source)) return std::nullopt;
     using Score = std::tuple<int, long long, long long, FocusWindowId>;
     std::optional<Score> best;
     std::optional<FocusWindowId> selected;
     for (const auto& target : targets) {
-        if (target.id == current || !FocusDetail::valid(target)) continue;
+        if (target.id == current || !focusEligible(target)) continue;
         const auto forward = axis->sign * (FocusDetail::center(target.bounds, axis->horizontal) -
                                           FocusDetail::center(source->bounds, axis->horizontal));
         if (forward <= 0) continue;
