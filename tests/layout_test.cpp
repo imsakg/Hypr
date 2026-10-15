@@ -68,4 +68,9 @@ TEST(weighted_equal_cells_keep_every_pixel) {
  const auto cells=tileWeighted(Rect{0,0,101,60},{1,1},true,1);
  CHECK(cells[0].width==50); CHECK(cells[1]==Rect{51,0,50,60});
 }
+TEST(weighted_windows_receive_proportional_space) {
+ CHECK(tileWeighted(Rect{0,0,100,60},{3,1})[0].width==75);
+ const auto rows=tileWeighted(Rect{0,0,100,80},{1,3},false);
+ CHECK(rows[0].height==20); CHECK(rows[1].y==20);
+}
 TEST_MAIN()

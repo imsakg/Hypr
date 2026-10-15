@@ -50,7 +50,23 @@ inline std::vector<Rect> folded(Rect area, std::size_t count, int gap, double ra
     return result;
 }
 inline std::vector<Rect> tileWeighted(Rect area, const std::vector<double>& weights, bool horizontal = true, int gap = 0) {
-    return splitAxis(area,weights.size(),horizontal,gap);
+    auto result=splitAxis(area,weights.size(),horizontal,gap);
+    if (weights.empty()) return result;
+    double total=0; for (double w:weights) total+=w;
+    const int extent=std::max(0,horizontal?area.width:area.height);
+    gap=weights.size()<2?0:std::clamp(gap,0,extent/static_cast<int>(weights.size()-1));
+    const int available=extent-gap*static_cast<int>(weights.size()-1);
+    long double cumulative=0;
+    int previous=0, offset=0;
+    for (std::size_t i=0;i<weights.size();++i) {
+        cumulative+=weights[i];
+        const int end=i+1==weights.size()?available:static_cast<int>(std::ceil(available*cumulative/total));
+        const int size=std::clamp(end-previous,0,available-previous);
+        if (horizontal) { result[i].x=saturatedInt(static_cast<long long>(area.x)+offset); result[i].width=size; }
+        else { result[i].y=saturatedInt(static_cast<long long>(area.y)+offset); result[i].height=size; }
+        previous+=size; offset+=size; if (i+1<weights.size()) offset+=gap;
+    }
+    return result;
 }
 // Layout internals.
 inline std::vector<Rect> tile(Rect area, std::size_t count, LayoutOptions options = {}) {
