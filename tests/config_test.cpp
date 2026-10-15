@@ -18,4 +18,14 @@ TEST(comments_respect_quotes_and_escapes) {
     CHECK(stripComment(R"(key=a\\# note)") == R"(key=a\\)");
 }
 
+TEST(signed_decimal_is_strict_and_bounded) {
+    CHECK(parseInteger("  +42 ") == 42);
+    CHECK(parseInteger("-17") == -17);
+    CHECK(parseInteger("0012") == 12);
+    CHECK(parseInteger("2147483647") == 2147483647);
+    CHECK(parseInteger("-2147483648") == (-2147483647 - 1));
+    for (const auto* text : {"", "+", "--1", "1a", "1 2", "2147483648", "-2147483649", "9999999999999999999999999"})
+        CHECK(!parseInteger(text));
+}
+
 TEST_MAIN()
