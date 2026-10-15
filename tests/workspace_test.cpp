@@ -153,4 +153,27 @@ TEST(empty_cleanup_protects_active_pinned_and_populated_workspaces) {
     CHECK(state.cleanupEmpty() == std::vector<WorkspaceId>({3}));
     CHECK(state.active() == 1);
 }
+TEST(workspace_targets_validate_full_signed_offsets_before_arithmetic) {
+    WorkspaceState state;
+    CHECK(!state.resolveTarget("-1"));
+    CHECK(state.resolveTarget("12") == 12);
+    state.addWorkspace(1); state.addWorkspace(3); state.addWorkspace(9);
+    CHECK(!state.resolveTarget("-1"));
+    CHECK(state.resolveTarget("+1") == 2);
+    CHECK(state.resolveTarget("next") == 3);
+    CHECK(state.resolveTarget("prev") == 9);
+    CHECK(!state.resolveTarget("lastworkspace"));
+    state.activate(3);
+    CHECK(state.resolveTarget("-1") == 2);
+    CHECK(state.resolveTarget(" +6 ") == 9);
+    CHECK(state.resolveTarget("lastworkspace") == 1);
+    for (const auto* text : {"", "0", "+0", "-0", "+", "-", "--1", "+-1", "1x", "-1x", "3 4", "2147483648", "99999999999999999999999"})
+        CHECK(!state.resolveTarget(text));
+    state.addWorkspace(2147483647);
+    state.activate(2147483647);
+    CHECK(!state.resolveTarget("+1"));
+    CHECK(state.resolveTarget("-2147483646") == 1);
+    CHECK(!state.resolveTarget("-2147483647"));
+    CHECK(state.active() == 2147483647);
+}
 TEST_MAIN()

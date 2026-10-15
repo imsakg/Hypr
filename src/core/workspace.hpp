@@ -1,9 +1,13 @@
 #pragma once
 #include <algorithm>
+#include <charconv>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <optional>
+#include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace HyprCore {
@@ -111,6 +115,28 @@ public:
         if (it == workspaces_.end()) return std::nullopt;
         if (it == workspaces_.begin()) it = workspaces_.end();
         return std::prev(it)->first;
+    }
+    std::optional<WorkspaceId> resolveTarget(std::string_view text) const {
+        const auto space = [](char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; };
+        while (!text.empty() && space(text.front())) text.remove_prefix(1);
+        while (!text.empty() && space(text.back())) text.remove_suffix(1);
+        if (text == "next") return active_ ? nextWorkspace(*active_) : std::nullopt;
+        if (text == "prev") return active_ ? previousWorkspace(*active_) : std::nullopt;
+        if (text == "lastworkspace" || text == "last") return last_;
+        if (text.empty()) return std::nullopt;
+        const char sign = text.front();
+        const bool relative = sign == '+' || sign == '-';
+        if (relative) text.remove_prefix(1);
+        if (text.empty() || text.front() < '0' || text.front() > '9') return std::nullopt;
+        WorkspaceId number = 0;
+        const auto parsed = std::from_chars(text.data(), text.data() + text.size(), number);
+        if (parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size() || number <= 0)
+            return std::nullopt;
+        if (!relative) return number;
+        if (!active_) return std::nullopt;
+        const auto result = static_cast<long long>(*active_) + (sign == '-' ? -static_cast<long long>(number) : number);
+        if (result <= 0 || result > std::numeric_limits<WorkspaceId>::max()) return std::nullopt;
+        return static_cast<WorkspaceId>(result);
     }
     std::vector<WorkspaceId> ids() const {
         std::vector<WorkspaceId> result;
