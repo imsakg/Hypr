@@ -6,11 +6,25 @@ Started by Vaxry on 2021 / 11 / 17
 */
 
 #include <fstream>
+#include <iostream>
+#include "core/runtime.hpp"
 #include "windowManager.hpp"
 #include "defines.hpp"
 #include "bar/Bar.hpp"
 
 int main(int argc, char** argv) {
+    if (argc>1) {
+        if (argc!=3 || std::string(argv[1])!="--check-config") {
+            std::cerr<<"Usage: Hypr [--check-config FILE]\n"; return 2;
+        }
+        std::ifstream stream(argv[2]);
+        if (!stream) { std::cerr<<"Cannot read config: "<<argv[2]<<'\n'; return 2; }
+        const std::string text((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
+        const auto errors=HyprCore::validateRuntimeConfig(text);
+        for (const auto& error:errors) std::cerr<<argv[2]<<':'<<error.line<<": "<<error.message<<'\n';
+        if (!errors.empty()) return 1;
+        std::cout<<"Configuration valid; no commands executed\n"; return 0;
+    }
     clearLogs();
 
     Debug::log(LOG, "Hypr debug log. Built on " + std::string(__DATE__) + " at " + std::string(__TIME__));

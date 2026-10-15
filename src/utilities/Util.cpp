@@ -1,4 +1,5 @@
 #include "Util.hpp"
+#include <array>
 #include "../windowManager.hpp"
 
 // Execute a shell command and get the output

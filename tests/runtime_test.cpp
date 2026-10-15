@@ -63,4 +63,8 @@ TEST(rule_actions_preserve_false_flags_and_positive_workspace_ids) {
  const auto workspace=parseRule("workspace 4,class:^Term$"); CHECK(workspace.ok()); CHECK(workspace.rule->action().first==4);
  CHECK(!parseRule("workspace -1,class:Term").ok());
 }
+TEST(preflight_is_passive_even_when_exec_directives_are_present) {
+ CHECK(validateRuntimeConfig("exec=touch /never-executed\nexec-once=printf 'hello#world'\n").empty());
+ CHECK(!validateRuntimeConfig("exec=\n").empty());
+}
 TEST_MAIN()
