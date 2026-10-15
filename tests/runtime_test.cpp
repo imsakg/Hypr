@@ -52,4 +52,10 @@ TEST(resize_bindings_accept_exact_signed_pixel_pairs) {
  CHECK(!resizeArgument("20 -10 extra")); CHECK(parseConfigBinding("SUPER,H,resizeactive,20 -10").ok());
  CHECK(!parseConfigBinding("SUPER,H,resizeactive,20").ok());
 }
+TEST(runtime_preflight_catches_schema_errors_before_any_effects) {
+ CHECK(validateRuntimeConfig("layout = folded\nbar {\ncol.bg=0xffffffff\n}\nbind=SUPERSHIFT,Q,resizeactive,20 -10\n").empty());
+ CHECK(!validateRuntimeConfig("exec=touch never-run\ngaps_in=10bad\n").empty());
+ CHECK(!validateRuntimeConfig("animations {\nspeed=nan\n}\n").empty());
+ CHECK(!validateRuntimeConfig("unknown=1\n").empty()); CHECK(runtimeInteger("0xffffffff")==4294967295LL);
+}
 TEST_MAIN()

@@ -291,94 +291,53 @@ void parseLine(std::string& line) {
 }
 
 void ConfigManager::loadConfigLoadVars() {
-    const auto ORIGBORDERSIZE = configValues["border_size"].intValue;
-    Debug::log(LOG, "Reloading the config!");
-    ConfigManager::parseError = ""; // reset the error
-    ConfigManager::currentCategory = ""; // reset the category
-    ConfigManager::windowRules.clear(); // Clear rules
-
+    parseError.clear();
+    const auto home=getenv("HOME");
+    if (!home) { parseError="HOME is not set"; return; }
+    const std::string path=std::string(home)+(ISDEBUG?"/.config/hypr/hyprd.conf":"/.config/hypr/hypr.conf");
+    std::ifstream stream(path);
+    if (!stream) { parseError="The config could not be read: "+path; return; }
+    const std::string text((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
+    const auto errors=HyprCore::validateRuntimeConfig(text);
+    if (!errors.empty()) { parseError="Config error at line "+std::to_string(errors[0].line)+": "+errors[0].message; return; }
+    const auto document=HyprCore::parseConfig(text);
+    const auto previousValues=configValues;
+    const auto previousRules=windowRules;
+    const auto previousBindings=KeybindManager::keybinds;
+    const auto originalBorder=configValues["border_size"].intValue;
+    windowRules.clear(); KeybindManager::keybinds.clear();
+    std::vector<HyprCore::ConfigEntry> deferred;
+    for (const auto& entry:document.entries) {
+        if (entry.key=="exec" || entry.key=="exec-once" || entry.key=="module" || entry.key=="status_command") { deferred.push_back(entry); continue; }
+        currentCategory=entry.category;
+        auto line=entry.key+"="+entry.value;
+        try { parseLine(line); }
+        catch (const std::exception&) { parseError="Config error at line "+std::to_string(entry.line); }
+        if (!parseError.empty()) break;
+    }
+    currentCategory.clear();
+    if (!parseError.empty()) { configValues=previousValues; windowRules=previousRules; KeybindManager::keybinds=previousBindings; return; }
+    // No external effects are permitted until the complete candidate is validated.
     if (loadBar && g_pWindowManager->statusBar) {
-        // clear modules as we overwrite them
-        for (auto& m : g_pWindowManager->statusBar->modules) {
-            g_pWindowManager->statusBar->destroyModule(m);
-        }
+        for (auto* module:g_pWindowManager->statusBar->modules) g_pWindowManager->statusBar->destroyModule(module);
         g_pWindowManager->statusBar->modules.clear();
     }
-
-    KeybindManager::keybinds.clear();
-
-    const char* const ENVHOME = getenv("HOME");
-
-    const std::string CONFIGPATH = ENVHOME + (ISDEBUG ? (std::string) "/.config/hypr/hyprd.conf" : (std::string) "/.config/hypr/hypr.conf");
-
-    std::ifstream ifs;
-    ifs.open(CONFIGPATH.c_str());
-
-    if (!ifs.good()) {
-        Debug::log(WARN, "Config reading error. (No file?)");
-        ConfigManager::parseError = "The config could not be read. (No file?)";
-
-        ifs.close();
-        return;
+    for (const auto& entry:deferred) {
+        if (entry.key=="module" && entry.category=="bar" && g_pWindowManager->statusBar) parseModule(entry.key,entry.value);
+        else if (entry.key=="status_command") handleStatusCommand(entry.key,entry.value);
+        else if (entry.key=="exec" || (entry.key=="exec-once" && isFirstLaunch)) handleRawExec(entry.key,entry.value);
     }
-
-    std::string line = "";
-    int linenum = 1;
-    if (ifs.is_open()) {
-        while (std::getline(ifs, line)) {
-            // Read line by line.
-            try {
-                parseLine(line);
-            } catch(...) {
-                Debug::log(ERR, "Error reading line from config. Line:");
-                Debug::log(NONE, line);
-                
-                parseError = "Config error at line " + std::to_string(linenum) + ": Line parsing error.";
-            }
-
-            if (parseError != "" && parseError.find("Config error at line") != 0) {
-                parseError = "Config error at line " + std::to_string(linenum) + ": " + parseError;
-            }
-
-            ++linenum;
-            
-        }
-
-        ifs.close();
-    }
-
-    // recalc all workspaces
     g_pWindowManager->recalcAllWorkspaces();
-
-    // Reload the bar as well, don't load it before the default is loaded.
-    if (loadBar && g_pWindowManager->statusBar && (configValues["bar:enabled"].intValue == 1 || parseError != "")) {
-        g_pWindowManager->statusBar->destroy();
-
-        // make the bar height visible
-        if (parseError != "") {
-            configValues["bar:height"].intValue = 15;
-        }
-
-        if (configValues["bar:monitor"].intValue > g_pWindowManager->monitors.size()) {
-            configValues["bar:monitor"].intValue = 0;
-            Debug::log(ERR, "Incorrect value in MonitorID for the bar. Setting to 0.");
-        }
-
-        g_pWindowManager->statusBar->setup(configValues["bar:monitor"].intValue);
-    } else if (g_pWindowManager->statusBar) {
-        g_pWindowManager->statusBar->destroy();
+    if (g_pWindowManager->statusBar) {
+        if (loadBar && configValues["bar:enabled"].intValue==1 && !g_pWindowManager->monitors.empty()) {
+            g_pWindowManager->statusBar->destroy();
+            auto& monitor=configValues["bar:monitor"].intValue;
+            if (monitor<0 || static_cast<std::size_t>(monitor)>=g_pWindowManager->monitors.size()) monitor=0;
+            g_pWindowManager->statusBar->setup(monitor);
+        } else g_pWindowManager->statusBar->destroy();
     }
-
-    // Ensure correct layout
-    if (configValues["layout"].intValue < 0 || configValues["layout"].intValue > LAYOUT_FOLDED) {
-        Debug::log(ERR, "Invalid layout ID, falling back to 0.");
-        configValues["layout"].intValue = 0;
-    }
-
-    loadBar = true;
-    isFirstLaunch = false;
-
-    if (ORIGBORDERSIZE != configValues["border_size"].intValue) EWMH::refreshAllExtents(); 
+    loadBar=true; isFirstLaunch=false;
+    if (originalBorder!=configValues["border_size"].intValue) EWMH::refreshAllExtents();
 }
 
 void ConfigManager::applyKeybindsToX() {
