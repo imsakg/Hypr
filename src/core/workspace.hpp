@@ -13,6 +13,7 @@ struct Workspace {
     explicit Workspace(WorkspaceId value = 0) : id(value) {}
     WorkspaceId id = 0;
     std::vector<WorkspaceWindowId> windows;
+    std::optional<WorkspaceWindowId> focused;
 };
 
 // Values are read-only outside the state machine; rejected operations do not mutate it.
@@ -39,6 +40,7 @@ public:
         const auto it = workspaces_.find(id);
         if (!window || it == workspaces_.end() || workspaceOf(window)) return false;
         it->second.windows.push_back(window);
+        if (!it->second.focused) it->second.focused = window;
         return true;
     }
     bool moveWindow(WorkspaceWindowId window, WorkspaceId destination) {
@@ -46,9 +48,21 @@ public:
         const auto target = workspaces_.find(destination);
         if (!from || target == workspaces_.end()) return false;
         if (*from == destination) return true;
-        auto& source = workspaces_.at(*from).windows;
+        auto& source = workspaces_.at(*from);
         target->second.windows.push_back(window);
-        source.erase(std::find(source.begin(), source.end(), window));
+        source.windows.erase(std::find(source.windows.begin(), source.windows.end(), window));
+        if (source.focused == window) source.focused = source.windows.empty() ?
+            std::nullopt : std::optional<WorkspaceWindowId>{source.windows.front()};
+        if (!target->second.focused) target->second.focused = window;
+        return true;
+    }
+    std::optional<WorkspaceWindowId> focused() const {
+        return active_ ? workspaces_.at(*active_).focused : std::nullopt;
+    }
+    bool focusWindow(WorkspaceWindowId window) {
+        const auto home = workspaceOf(window);
+        if (!home || home != active_) return false;
+        workspaces_.at(*home).focused = window;
         return true;
     }
     std::optional<WorkspaceId> active() const { return active_; }

@@ -90,4 +90,25 @@ TEST(moving_windows_appends_without_reordering_survivors_or_switching_workspace)
     CHECK(state.workspace(2)->windows == std::vector<WorkspaceWindowId>({99, 10}));
     CHECK(state.active() == 1 && !state.last());
 }
+TEST(focus_always_belongs_to_the_active_workspace_and_survives_moves) {
+    WorkspaceState state;
+    state.addWorkspace(1); state.addWorkspace(2); state.addWorkspace(3);
+    state.addWindow(1, 10); state.addWindow(1, 20); state.addWindow(2, 30);
+    CHECK(state.focused() == 10);
+    CHECK(state.focusWindow(20));
+    CHECK(!state.focusWindow(30));
+    CHECK(!state.focusWindow(999));
+    CHECK(state.focused() == 20);
+    CHECK(state.moveWindow(20, 2));
+    CHECK(state.workspace(1)->focused == 10);
+    CHECK(state.workspace(2)->focused == 30);
+    CHECK(state.focused() == 10);
+    CHECK(state.activate(2));
+    CHECK(state.focused() == 30);
+    CHECK(state.focusWindow(20));
+    CHECK(state.moveWindow(20, 3));
+    CHECK(state.focused() == 30);
+    CHECK(state.workspace(3)->focused == 20);
+    CHECK(state.activate(3) && state.focused() == 20);
+}
 TEST_MAIN()
