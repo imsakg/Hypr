@@ -68,4 +68,13 @@ TEST(fields_respect_quotes_and_delimiter_escapes) {
     CHECK(rejected);
 }
 
+TEST(bounded_fields_leave_command_tail_verbatim) {
+    const auto fields = splitFields(R"(SUPER,R,exec,printf '%s,%s' "a,b" c\,d)", 4);
+    CHECK(fields == std::vector<std::string>({"SUPER", "R", "exec", R"(printf '%s,%s' "a,b" c\,d)"}));
+    CHECK(splitFields(" a,b ", 1) == std::vector<std::string>{"a,b"});
+    CHECK(splitFields("a,b", 0).empty());
+    CHECK(splitFields("a,", 2) == std::vector<std::string>({"a", ""}));
+    CHECK(splitFields("a,b", 8) == splitFields("a,b"));
+}
+
 TEST_MAIN()

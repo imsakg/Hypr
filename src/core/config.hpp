@@ -99,11 +99,18 @@ inline std::optional<bool> parseBoolean(const std::string& input) {
     return std::nullopt;
 }
 
-inline std::vector<std::string> splitFields(const std::string& text) {
+// The final bounded field is opaque text, suitable for an exec command tail.
+inline std::vector<std::string> splitFields(const std::string& text,
+                                          std::size_t maxFields = std::numeric_limits<std::size_t>::max()) {
     std::vector<std::string> fields;
+    if (maxFields == 0) return fields;
     std::string field;
     char quote = 0;
     for (std::size_t i = 0; i < text.size(); ++i) {
+        if (fields.size() == maxFields - 1) {
+            fields.push_back(trim(text.substr(i)));
+            return fields;
+        }
         const char c = text[i];
         if (c == '\\' && i + 1 < text.size()) {
             const char next = text[i + 1];
