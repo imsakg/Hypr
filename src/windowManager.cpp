@@ -1118,6 +1118,7 @@ void CWindowManager::recalcEntireWorkspace(const int& workspace) {
         {
             // Get the monitor
             const auto PMONITOR = getMonitorFromWorkspace(workspace);
+            if (!PMONITOR) return;
 
             // first, calc the size
             CWindow* pMaster = nullptr;
@@ -1414,8 +1415,10 @@ void CWindowManager::fixWindowOnClose(CWindow* pClosedWindow) {
     // Get the parent and both children, one of which will be pWindow
     const auto PPARENT = getWindowFromDrawable(pClosedWindow->getParentNodeID());
 
-    if (!PPARENT) 
-        return; // if there was no parent, we do not need to update anything. it was a fullscreen window, the only one on a given workspace.
+    if (!PPARENT) {
+        if (HyprCore::flatLayout(ConfigManager::getInt("layout"))) recalcEntireWorkspace(pClosedWindow->getWorkspaceID());
+        return;
+    }
 
     // Get the sibling
     const auto PSIBLING = getWindowFromDrawable(PPARENT->getChildNodeAID() == pClosedWindow->getDrawable() ? PPARENT->getChildNodeBID() : PPARENT->getChildNodeAID());
@@ -1449,7 +1452,7 @@ void CWindowManager::fixWindowOnClose(CWindow* pClosedWindow) {
     fixMasterWorkspaceOnClosed(pClosedWindow);
 
     // recalc the workspace
-    if (ConfigManager::getInt("layout") == LAYOUT_MASTER)
+    if (ConfigManager::getInt("layout") == LAYOUT_MASTER || HyprCore::flatLayout(ConfigManager::getInt("layout")))
         recalcEntireWorkspace(WORKSPACE);
     else {
         PSIBLING->recalcSizePosRecursive();
@@ -2499,6 +2502,14 @@ SMonitor* CWindowManager::getMonitorFromCoord(const Vector2D coord) {
 }
 
 void CWindowManager::changeSplitRatioCurrent(const char& dir) {
+    if (dir!='+' && dir!='-') return;
+    if (HyprCore::flatLayout(ConfigManager::getInt("layout"))) {
+        if (ConfigManager::getInt("layout")==LAYOUT_FOLDED) {
+            ConfigManager::configValues["layout:fold_ratio"].floatValue=HyprCore::resizeSplitRatio(ConfigManager::getFloat("layout:fold_ratio"),dir=='+'?0.05:-0.05);
+            recalcAllWorkspaces();
+        }
+        return;
+    }
 
     const auto CURRENT = getWindowFromDrawable(LastWindow);
 
