@@ -32,4 +32,12 @@ TEST(split_ratio_changes_are_bounded_and_nan_safe) {
  CHECK(resizeSplitRatio(0.2,-100)==0.1);
  CHECK(resizeSplitRatio(std::numeric_limits<double>::quiet_NaN(),0)==0.5);
 }
+TEST(resize_results_always_obey_effective_bounds) {
+ for (int minimum=-2;minimum<20;++minimum) for (int maximum=-2;maximum<20;++maximum) {
+  SizeHints h; h.minWidth=minimum; h.maxWidth=maximum; h.widthIncrement=3;
+  const auto r=resizeBy(Rect{0,0,10,10},-50,0,h);
+  CHECK(r.width>=std::max(1,minimum)); CHECK(r.width<=std::max(std::max(1,minimum),maximum));
+ }
+ CHECK(resizeEdges(Rect{0,0,10,10},std::numeric_limits<int>::min(),0,true,false).width>0);
+}
 TEST_MAIN()
