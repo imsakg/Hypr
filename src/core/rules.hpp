@@ -104,10 +104,19 @@ struct RuleParseResult {
 
 inline std::size_t ruleConditionSeparator(const std::string& text, std::size_t first) {
     bool escaped = false;
+    bool characterClass = false;
+    std::size_t groupDepth = 0;
     for (std::size_t i = first; i < text.size(); ++i) {
         if (escaped) { escaped = false; continue; }
         if (text[i] == '\\') { escaped = true; continue; }
-        if (text[i] == '&' && i + 1 < text.size() && text[i + 1] == '&' &&
+        if (characterClass) {
+            if (text[i] == ']') characterClass = false;
+            continue;
+        }
+        if (text[i] == '[') { characterClass = true; continue; }
+        if (text[i] == '(') { ++groupDepth; continue; }
+        if (text[i] == ')' && groupDepth != 0) { --groupDepth; continue; }
+        if (groupDepth == 0 && text[i] == '&' && i + 1 < text.size() && text[i + 1] == '&' &&
             (i == first || configSpace(text[i - 1])) &&
             (i + 2 == text.size() || configSpace(text[i + 2]))) return i;
     }

@@ -207,4 +207,28 @@ TEST(embedded_nul_rule_patterns_fail_before_regex_compilation_and_reload) {
     CHECK(store.snapshot().rules.resolve({"term", "", ""}).floating == true);
 }
 
+TEST(compound_separator_lexing_preserves_regex_groups_classes_and_escapes) {
+    const auto group = parseRule(R"(float,title:^(A && B|C)$ && class:^term$)");
+    CHECK(group.ok());
+    CHECK(group.rule->matches({"term", "", "A && B"}));
+    CHECK(group.rule->matches({"term", "", "C"}));
+    CHECK(!group.rule->matches({"other", "", "A && B"}));
+    const auto chars = parseRule(R"(float,title:^[ && ]+$ && !role:^normal$)");
+    CHECK(chars.ok());
+    CHECK(chars.rule->matches({"", "dialog", " && "}));
+    CHECK(!chars.rule->matches({"", "normal", " && "}));
+    const auto escaped = parseRule(R"(float,title:^A \&\& B$ && class:^term$)");
+    CHECK(escaped.ok());
+    CHECK(escaped.rule->matches({"term", "", "A && B"}));
+    const auto escapedParens = parseRule(R"(float,title:^\(A\)$ && class:term)");
+    CHECK(escapedParens.ok());
+    CHECK(escapedParens.rule->matches({"term", "", "(A)"}));
+    const auto nested = parseRule(R"(float,title:^((A && B)|C[()])$ && role:dialog)");
+    CHECK(nested.ok());
+    CHECK(nested.rule->matches({"", "dialog", "A && B"}));
+    CHECK(nested.rule->matches({"", "dialog", "C("}));
+    CHECK(!parseRule("float,title:(A && role:dialog").ok());
+    CHECK(!parseRule("float,title:[ && class:term").ok());
+}
+
 TEST_MAIN()
