@@ -46,6 +46,13 @@ inline bool overlaps(const Rect& a, const Rect& b, bool horizontal) {
 inline long long magnitude(long long value) { return value < 0 ? -value : value; }
 }
 
+// Back-to-front stacking order: the last eligible hit is topmost.
+inline std::optional<FocusWindowId> focusAtPoint(const std::vector<FocusTarget>& targets, int x, int y) {
+    for (auto it = targets.rbegin(); it != targets.rend(); ++it)
+        if (focusEligible(*it) && contains(it->bounds, x, y)) return it->id;
+    return std::nullopt;
+}
+
 class FocusHistory {
 public:
     bool remember(FocusWindowId id) {

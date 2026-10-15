@@ -114,4 +114,18 @@ TEST(focus_history_deduplicates_recency_and_falls_back_only_to_eligible_survivor
     CHECK(history.remember(20));
     CHECK(history.entries() == std::vector<FocusWindowId>({20, 10, 30}));
 }
+TEST(pointer_focus_uses_topmost_eligible_half_open_bounds) {
+    const std::vector<FocusTarget> targets{
+        {1, {-10, -10, 30, 30}}, {2, {0, 0, 10, 10}},
+        {3, {0, 0, 10, 10}, false}, {4, {0, 0, 10, 10}, true, false},
+        {5, {0, 0, 10, 10}, true, true, true}, {0, {0, 0, 10, 10}}};
+    CHECK(focusAtPoint(targets, 0, 0) == 2);
+    CHECK(focusAtPoint(targets, 9, 9) == 2);
+    CHECK(focusAtPoint(targets, 10, 10) == 1);
+    CHECK(focusAtPoint(targets, -10, -10) == 1);
+    CHECK(!focusAtPoint(targets, 20, 20));
+    CHECK(!focusAtPoint(targets, -11, 0));
+    CHECK(!focusAtPoint({}, 0, 0));
+    CHECK(!focusAtPoint({{1, {0, 0, 0, 10}}}, 0, 0));
+}
 TEST_MAIN()
