@@ -52,4 +52,11 @@ TEST(booleans_use_explicit_case_insensitive_tokens) {
     for (const auto* text : {"", "2", "-1", "truthy", "true tail", "0x1"}) CHECK(!parseBoolean(text));
 }
 
+TEST(comma_fields_keep_empty_positions) {
+    CHECK(splitFields("") == std::vector<std::string>{""});
+    CHECK(splitFields("a,, b ,") == std::vector<std::string>({"a", "", "b", ""}));
+    CHECK(splitFields(",") == std::vector<std::string>({"", ""}));
+    CHECK(splitFields("single") == std::vector<std::string>{"single"});
+}
+
 TEST_MAIN()

@@ -6,6 +6,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace HyprCore {
 
@@ -95,6 +96,19 @@ inline std::optional<bool> parseBoolean(const std::string& input) {
     if (text == "true" || text == "yes" || text == "on" || text == "1") return true;
     if (text == "false" || text == "no" || text == "off" || text == "0") return false;
     return std::nullopt;
+}
+
+inline std::vector<std::string> splitFields(const std::string& text) {
+    std::vector<std::string> fields;
+    std::size_t start = 0;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        if (text[i] == ',') {
+            fields.push_back(trim(text.substr(start, i - start)));
+            start = i + 1;
+        }
+    }
+    fields.push_back(trim(text.substr(start)));
+    return fields;
 }
 
 } // namespace HyprCore
