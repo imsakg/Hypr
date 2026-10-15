@@ -58,4 +58,9 @@ TEST(runtime_preflight_catches_schema_errors_before_any_effects) {
  CHECK(!validateRuntimeConfig("animations {\nspeed=nan\n}\n").empty());
  CHECK(!validateRuntimeConfig("unknown=1\n").empty()); CHECK(runtimeInteger("0xffffffff")==4294967295LL);
 }
+TEST(rule_actions_preserve_false_flags_and_positive_workspace_ids) {
+ const auto flag=parseRule("pseudo false,title:^Preview$"); CHECK(flag.ok()); CHECK(!flag.rule->action().enabled);
+ const auto workspace=parseRule("workspace 4,class:^Term$"); CHECK(workspace.ok()); CHECK(workspace.rule->action().first==4);
+ CHECK(!parseRule("workspace -1,class:Term").ok());
+}
 TEST_MAIN()

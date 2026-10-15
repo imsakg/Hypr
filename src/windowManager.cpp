@@ -2027,7 +2027,7 @@ bool CWindowManager::shouldBeFloatedOnInit(int64_t window) {
 
     Debug::log(LOG, "New window got class " + (std::string)CLASSINSTANCE + " -> " + CLASSNAME);
 
-    xcb_change_property(DisplayConnection, XCB_PROP_MODE_REPLACE, window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8, strlen("hypr"), "hypr");
+    PWINDOW->setName(getWindowName(window)); // Preserve the client title for title selectors.
 
     // Role stuff
     const auto WINROLE = getRoleName(window);
@@ -2070,21 +2070,21 @@ bool CWindowManager::shouldBeFloatedOnInit(int64_t window) {
     //
     //
 
-    // Verify the rules.
-    for (auto& rule : ConfigManager::getMatchingRules(window)) {
-        if (rule.szRule == "tile")
-            return false;
-        else if (rule.szRule == "float")
-            return true;
-        else if (rule.szRule == "nointerventions") {
-            PWINDOW->setNoInterventions(true);
-            PWINDOW->setImmovable(true);
-            return true;
+    // Apply all matching overrides in order rather than returning on the first match.
+    bool floating=false;
+    for (const auto& rule:ConfigManager::getMatchingRules(window)) {
+        if (!rule.compiled) continue;
+        const auto action=rule.compiled->action();
+        if (action.type==HyprCore::RuleActionType::Float) floating=true;
+        else if (action.type==HyprCore::RuleActionType::Tile) floating=false;
+        else if (action.type==HyprCore::RuleActionType::NoInterventions) {
+            PWINDOW->setNoInterventions(action.enabled); PWINDOW->setImmovable(action.enabled);
+            if (action.enabled) floating=true;
         }
     }
-
-    return false;
+    return floating;
 }
+
 
 void CWindowManager::updateActiveWindowName() {
     if (!getWindowFromDrawable(LastWindow))

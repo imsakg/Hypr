@@ -170,6 +170,18 @@ void Events::eventUnmapWindow(xcb_generic_event_t* event) {
     EWMH::updateClientList();
 }
 
+namespace {
+int initialRuleWorkspace(int window,int fallback,int monitor) {
+    int target=fallback;
+    for (const auto& rule:ConfigManager::getMatchingRules(window))
+        if (rule.compiled && rule.compiled->action().type==HyprCore::RuleActionType::Workspace) target=rule.compiled->action().first;
+    if (!g_pWindowManager->getWorkspaceByID(target)) {
+        CWorkspace workspace; workspace.setID(target); workspace.setMonitor(monitor); workspace.setLastWindow(0);
+        g_pWindowManager->workspaces.push_back(workspace);
+    }
+    return target;
+}
+}
 CWindow* Events::remapFloatingWindow(int windowID, int forcemonitor) {
     // The array is not realloc'd in this method we can make this const
     const auto PWINDOWINARR = g_pWindowManager->getWindowFromDrawable(windowID);
@@ -205,7 +217,7 @@ CWindow* Events::remapFloatingWindow(int windowID, int forcemonitor) {
 
                 Debug::log(LOG, "Rule monitor, applying to window " + std::to_string(windowID));
 
-                if (MONITOR > g_pWindowManager->monitors.size() || MONITOR < 0)
+                if (static_cast<std::size_t>(MONITOR) >= g_pWindowManager->monitors.size() || MONITOR < 0)
                     forcemonitor = -1;
                 else
                     forcemonitor = MONITOR;
@@ -214,13 +226,13 @@ CWindow* Events::remapFloatingWindow(int windowID, int forcemonitor) {
             }
         }
 
-        if (rule.szRule.find("pseudo") == 0) {
-            PWINDOWINARR->setIsPseudotiled(true);
-        }
+        if (rule.compiled && rule.compiled->action().type==HyprCore::RuleActionType::Pseudo)
+            PWINDOWINARR->setIsPseudotiled(rule.compiled->action().enabled);
     }
 
     const auto CURRENTSCREEN = forcemonitor != -1 ? forcemonitor : PMONITOR->ID;
-    PWINDOWINARR->setWorkspaceID(g_pWindowManager->activeWorkspaces[CURRENTSCREEN]);
+    const auto TARGETWORKSPACE=initialRuleWorkspace(windowID,g_pWindowManager->activeWorkspaces[CURRENTSCREEN],CURRENTSCREEN);
+    PWINDOWINARR->setWorkspaceID(TARGETWORKSPACE);
     PWINDOWINARR->setMonitor(CURRENTSCREEN);
 
     // Window name
@@ -436,7 +448,7 @@ CWindow* Events::remapWindow(int windowID, bool wasfloating, int forcemonitor) {
 
                 Debug::log(LOG, "Rule monitor, applying to window " + std::to_string(windowID));
 
-                if (MONITOR > g_pWindowManager->monitors.size() || MONITOR < 0)
+                if (static_cast<std::size_t>(MONITOR) >= g_pWindowManager->monitors.size() || MONITOR < 0)
                     forcemonitor = -1;
                 else
                     forcemonitor = MONITOR;
@@ -445,9 +457,8 @@ CWindow* Events::remapWindow(int windowID, bool wasfloating, int forcemonitor) {
             }
         }
 
-        if (rule.szRule.find("pseudo") == 0) {
-            PWINDOWINARR->setIsPseudotiled(true);
-        }
+        if (rule.compiled && rule.compiled->action().type==HyprCore::RuleActionType::Pseudo)
+            PWINDOWINARR->setIsPseudotiled(rule.compiled->action().enabled);
     }
 
     if (g_pWindowManager->getWindowFromDrawable(g_pWindowManager->LastWindow) && forcemonitor == -1 && PMONITOR->ID != g_pWindowManager->getWindowFromDrawable(g_pWindowManager->LastWindow)->getMonitor()) {
@@ -456,7 +467,8 @@ CWindow* Events::remapWindow(int windowID, bool wasfloating, int forcemonitor) {
     }
 
     const auto CURRENTSCREEN = forcemonitor != -1 ? forcemonitor : PMONITOR->ID;
-    PWINDOWINARR->setWorkspaceID(g_pWindowManager->activeWorkspaces[CURRENTSCREEN]);
+    const auto TARGETWORKSPACE=initialRuleWorkspace(windowID,g_pWindowManager->activeWorkspaces[CURRENTSCREEN],CURRENTSCREEN);
+    PWINDOWINARR->setWorkspaceID(TARGETWORKSPACE);
     PWINDOWINARR->setMonitor(CURRENTSCREEN);
 
     // Window name
@@ -483,7 +495,7 @@ CWindow* Events::remapWindow(int windowID, bool wasfloating, int forcemonitor) {
     }
 
     // Check if the workspace has a fullscreen window. if so, remove its' fullscreen status.
-    const auto PWORKSPACE = g_pWindowManager->getWorkspaceByID(g_pWindowManager->activeWorkspaces[CURRENTSCREEN]);
+    const auto PWORKSPACE = g_pWindowManager->getWorkspaceByID(TARGETWORKSPACE);
     if (PWORKSPACE && PWORKSPACE->getHasFullscreenWindow()) {
         const auto PFULLSCREENWINDOW = g_pWindowManager->getFullscreenWindowByWorkspace(PWORKSPACE->getID());
 
@@ -499,13 +511,13 @@ CWindow* Events::remapWindow(int windowID, bool wasfloating, int forcemonitor) {
 
     // Set the parent
     // check if lastwindow is on our workspace
-    if (auto PLASTWINDOW = g_pWindowManager->getWindowFromDrawable(g_pWindowManager->LastWindow); (PLASTWINDOW && PLASTWINDOW->getWorkspaceID() == g_pWindowManager->activeWorkspaces[CURRENTSCREEN]) || wasfloating || (forcemonitor != -1 && forcemonitor != PMONITOR->ID)) {
+    if (auto PLASTWINDOW = TARGETWORKSPACE!=g_pWindowManager->activeWorkspaces[CURRENTSCREEN]?g_pWindowManager->findFirstWindowOnWorkspace(TARGETWORKSPACE):g_pWindowManager->getWindowFromDrawable(g_pWindowManager->LastWindow); (PLASTWINDOW && PLASTWINDOW->getWorkspaceID() == TARGETWORKSPACE) || wasfloating || (forcemonitor != -1 && forcemonitor != PMONITOR->ID)) {
         // LastWindow is on our workspace, let's make a new split node
 
-        if (wasfloating || (forcemonitor != -1 && forcemonitor != PMONITOR->ID) || (forcemonitor != -1 && PLASTWINDOW->getWorkspaceID() != g_pWindowManager->activeWorkspaces[CURRENTSCREEN]) || PLASTWINDOW->getIsFloating()) {
+        if (wasfloating || (forcemonitor != -1 && forcemonitor != PMONITOR->ID) || (forcemonitor != -1 && PLASTWINDOW->getWorkspaceID() != TARGETWORKSPACE) || PLASTWINDOW->getIsFloating()) {
             // if it's force monitor, find the first on a workspace.
-            if ((forcemonitor != -1 && forcemonitor != PMONITOR->ID) || (forcemonitor != -1 && PLASTWINDOW->getWorkspaceID() != g_pWindowManager->activeWorkspaces[CURRENTSCREEN])) {
-                PLASTWINDOW = g_pWindowManager->findFirstWindowOnWorkspace(g_pWindowManager->activeWorkspaces[CURRENTSCREEN]);
+            if ((forcemonitor != -1 && forcemonitor != PMONITOR->ID) || (forcemonitor != -1 && PLASTWINDOW->getWorkspaceID() != TARGETWORKSPACE)) {
+                PLASTWINDOW = g_pWindowManager->findFirstWindowOnWorkspace(TARGETWORKSPACE);
             } else {
                 // find a window manually by the cursor
                 PLASTWINDOW = g_pWindowManager->findWindowAtCursor();
@@ -550,9 +562,9 @@ CWindow* Events::remapWindow(int windowID, bool wasfloating, int forcemonitor) {
     }
 
     // For master layout, add the index
-    PWINDOWINARR->setMasterChildIndex(g_pWindowManager->getWindowsOnWorkspace(g_pWindowManager->activeWorkspaces[CURRENTSCREEN]) - 1);
+    PWINDOWINARR->setMasterChildIndex(g_pWindowManager->getWindowsOnWorkspace(TARGETWORKSPACE) - 1);
     // and set master if needed
-    if (g_pWindowManager->getWindowsOnWorkspace(g_pWindowManager->activeWorkspaces[CURRENTSCREEN]) == 1) // 1 because the current window is already in the arr 
+    if (g_pWindowManager->getWindowsOnWorkspace(TARGETWORKSPACE) == 1) // current window is already in the array
         PWINDOWINARR->setMaster(true);
     
 
