@@ -41,6 +41,16 @@ public:
         it->second.windows.push_back(window);
         return true;
     }
+    bool moveWindow(WorkspaceWindowId window, WorkspaceId destination) {
+        const auto from = workspaceOf(window);
+        const auto target = workspaces_.find(destination);
+        if (!from || target == workspaces_.end()) return false;
+        if (*from == destination) return true;
+        auto& source = workspaces_.at(*from).windows;
+        target->second.windows.push_back(window);
+        source.erase(std::find(source.begin(), source.end(), window));
+        return true;
+    }
     std::optional<WorkspaceId> active() const { return active_; }
     std::optional<WorkspaceId> last() const { return last_; }
     bool activate(WorkspaceId id) {

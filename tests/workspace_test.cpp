@@ -72,4 +72,22 @@ TEST(workspace_membership_is_ordered_and_unique_across_workspaces) {
     CHECK(!state.workspaceOf(40));
     CHECK(!state.workspaceOf(0));
 }
+TEST(moving_windows_appends_without_reordering_survivors_or_switching_workspace) {
+    WorkspaceState state;
+    state.addWorkspace(1);
+    state.addWorkspace(2);
+    for (const auto id : {30u, 10u, 20u}) state.addWindow(1, id);
+    state.addWindow(2, 99);
+    CHECK(!state.moveWindow(10, 3));
+    CHECK(!state.moveWindow(777, 2));
+    CHECK(!state.moveWindow(0, 2));
+    CHECK(!state.moveWindow(10, -1));
+    CHECK(state.moveWindow(10, 2));
+    CHECK(state.workspaceOf(10) == 2);
+    CHECK(state.workspace(1)->windows == std::vector<WorkspaceWindowId>({30, 20}));
+    CHECK(state.workspace(2)->windows == std::vector<WorkspaceWindowId>({99, 10}));
+    CHECK(state.moveWindow(99, 2));
+    CHECK(state.workspace(2)->windows == std::vector<WorkspaceWindowId>({99, 10}));
+    CHECK(state.active() == 1 && !state.last());
+}
 TEST_MAIN()
