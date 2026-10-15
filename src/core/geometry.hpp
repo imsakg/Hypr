@@ -23,6 +23,13 @@ inline Rect intersection(const Rect& a, const Rect& b) {
     const auto bottom = std::min(static_cast<long long>(a.y) + std::max(0,a.height), static_cast<long long>(b.y) + std::max(0,b.height));
     return {saturatedInt(x), saturatedInt(y), saturatedInt(std::max(0LL,right-x)), saturatedInt(std::max(0LL,bottom-y))};
 }
+inline Rect reserve(Rect area, int left, int top, int right, int bottom) {
+    left = std::clamp(left,0,std::max(0,area.width));
+    top = std::clamp(top,0,std::max(0,area.height));
+    right = std::clamp(right,0,std::max(0,area.width-left));
+    bottom = std::clamp(bottom,0,std::max(0,area.height-top));
+    return {saturatedInt(static_cast<long long>(area.x)+left), saturatedInt(static_cast<long long>(area.y)+top), std::max(0,area.width-left-right), std::max(0,area.height-top-bottom)};
+}
 inline bool contains(const Rect& r, int x, int y) {
     return r.width > 0 && r.height > 0 && x >= r.x && y >= r.y &&
            static_cast<long long>(x) < static_cast<long long>(r.x) + r.width &&
