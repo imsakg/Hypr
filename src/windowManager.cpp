@@ -1,4 +1,5 @@
 #include "windowManager.hpp"
+#include "core/runtime.hpp"
 #include "./events/events.hpp"
 #include <string.h>
 
@@ -888,6 +889,8 @@ void CWindowManager::setEffectiveSizePosUsingConfig(CWindow* pWindow) {
         return;
 
     const auto MONITOR = getMonitorFromWindow(pWindow);
+    if (!MONITOR) return;
+    const bool FLATLAYOUT=HyprCore::flatLayout(ConfigManager::getInt("layout"));
 
     // set some flags.
     const bool DISPLAYLEFT          = STICKS(pWindow->getPosition().x, MONITOR->vecPosition.x);
@@ -902,10 +905,10 @@ void CWindowManager::setEffectiveSizePosUsingConfig(CWindow* pWindow) {
     auto TEMPEFFECTIVESIZE = pWindow->getSize();
     auto TEMPEFFECTIVEPOS  = pWindow->getPosition();
 
-    const auto OFFSETTOPLEFT = Vector2D(DISPLAYLEFT ? GAPSOUT + MONITOR->vecReservedTopLeft.x : GAPSIN,
+    const auto OFFSETTOPLEFT = FLATLAYOUT ? Vector2D(0,0) : Vector2D(DISPLAYLEFT ? GAPSOUT + MONITOR->vecReservedTopLeft.x : GAPSIN,
                                         DISPLAYTOP ? GAPSOUT + MONITOR->vecReservedTopLeft.y : GAPSIN);
 
-    const auto OFFSETBOTTOMRIGHT = Vector2D(DISPLAYRIGHT ? GAPSOUT + MONITOR->vecReservedBottomRight.x : GAPSIN,
+    const auto OFFSETBOTTOMRIGHT = FLATLAYOUT ? Vector2D(0,0) : Vector2D(DISPLAYRIGHT ? GAPSOUT + MONITOR->vecReservedBottomRight.x : GAPSIN,
                                             DISPLAYBOTTOM ? GAPSOUT + MONITOR->vecReservedBottomRight.y : GAPSIN);
 
     TEMPEFFECTIVEPOS = TEMPEFFECTIVEPOS + Vector2D(BORDERSIZE, BORDERSIZE);
@@ -981,6 +984,10 @@ CWindow* CWindowManager::findFirstWindowOnWorkspace(const int& work) {
 }
 
 void CWindowManager::calculateNewTileSetOldTile(CWindow* pWindow) {
+    if (HyprCore::flatLayout(ConfigManager::getInt("layout"))) {
+        recalcEntireWorkspace(pWindow->getWorkspaceID());
+        return;
+    }
     
     // Get the parent and both children, one of which will be pWindow
     const auto PPARENT = getWindowFromDrawable(pWindow->getParentNodeID());
@@ -1075,6 +1082,35 @@ SMonitor* CWindowManager::getMonitorFromWorkspace(const int& workspace) {
 }
 
 void CWindowManager::recalcEntireWorkspace(const int& workspace) {
+    const auto layout=ConfigManager::getInt("layout");
+    if (HyprCore::flatLayout(layout)) {
+        const auto monitor=getMonitorFromWorkspace(workspace);
+        if (!monitor) return;
+        HyprCore::Rect area{(int)monitor->vecPosition.x,(int)monitor->vecPosition.y,(int)monitor->vecSize.x,(int)monitor->vecSize.y};
+        area=HyprCore::reserve(area,(int)monitor->vecReservedTopLeft.x,(int)monitor->vecReservedTopLeft.y,(int)monitor->vecReservedBottomRight.x,(int)monitor->vecReservedBottomRight.y);
+        HyprCore::LayoutOptions options;
+        options.kind=layout==LAYOUT_HORIZONTAL?HyprCore::LayoutKind::Horizontal:layout==LAYOUT_VERTICAL?HyprCore::LayoutKind::Vertical:HyprCore::LayoutKind::Folded;
+        options.innerGap=HyprCore::saturatedInt(2LL*std::max(0,ConfigManager::getInt("gaps_in")));
+        options.outerGap=ConfigManager::getInt("gaps_out");
+        options.ratio=ConfigManager::getFloat("layout:fold_ratio");
+        options.foldHorizontal=ConfigManager::getInt("layout:fold_horizontal")!=0;
+        options.reverse=ConfigManager::getInt("layout:reverse")!=0;
+        options.smartGaps=ConfigManager::getInt("layout:no_gaps_when_only")!=0;
+        std::vector<CWindow*> ordered;
+        for (auto& window:windows)
+            if (window.getWorkspaceID()==workspace && window.getDrawable()>0 && !window.getDead() && !window.getDock() && !window.getNoInterventions()) ordered.push_back(&window);
+        std::stable_sort(ordered.begin(),ordered.end(),[](CWindow* a,CWindow* b){return a->getMasterChildIndex()<b->getMasterChildIndex();});
+        std::vector<HyprCore::LayoutClient> clients;
+        for (auto* window:ordered) clients.push_back({(uint64_t)window->getDrawable(),window->getIsFloating(),false,false});
+        for (const auto& placement:HyprCore::arrange(area,clients,options)) {
+            if (auto* window=getWindowFromDrawable(placement.id)) {
+                window->setPosition(Vector2D(placement.bounds.x,placement.bounds.y));
+                window->setSize(Vector2D(placement.bounds.width,placement.bounds.height));
+                window->setDirty(true);
+            }
+        }
+        return;
+    }
 
     switch (ConfigManager::getInt("layout"))
     {
