@@ -54,4 +54,21 @@ TEST(focus_eligibility_excludes_hidden_unmapped_unfocusable_and_degenerate_targe
     CHECK(!directionalFocus(targets, 4, FocusDirection::Right));
     CHECK(!directionalFocus(targets, 5, FocusDirection::Right));
 }
+TEST(directional_wrap_is_opt_in_and_chooses_the_opposite_edge_only_when_needed) {
+    const std::vector<FocusTarget> targets{
+        {1, {100, 100, 50, 50}}, {2, {0, 100, 50, 50}}, {3, {-100, 100, 50, 50}},
+        {4, {100, 0, 50, 50}}, {5, {100, -100, 50, 50}}};
+    CHECK(!directionalFocus(targets, 1, FocusDirection::Right));
+    CHECK(directionalFocus(targets, 1, FocusDirection::Right, true) == 3);
+    CHECK(directionalFocus(targets, 1, FocusDirection::Down, true) == 5);
+    CHECK(directionalFocus(targets, 3, FocusDirection::Left, true) == 1);
+    CHECK(directionalFocus(targets, 5, FocusDirection::Up, true) == 1);
+    CHECK(directionalFocus(targets, 1, FocusDirection::Left, true) == 2);
+    CHECK(directionalFocus(targets, 1, FocusDirection::Up, true) == 4);
+    CHECK(!directionalFocus({{1, {0, 0, 10, 10}}}, 1, FocusDirection::Right, true));
+    CHECK(!directionalFocus({{1, {0, 0, 10, 10}}, {2, {0, 100, 10, 10}}},
+                             1, FocusDirection::Right, true));
+    CHECK(directionalFocus({{1, {100, 100, 50, 50}}, {2, {-500, 0, 50, 50}},
+                            {3, {0, 100, 50, 50}}}, 1, FocusDirection::Right, true) == 3);
+}
 TEST_MAIN()

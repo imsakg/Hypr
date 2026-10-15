@@ -48,26 +48,33 @@ inline long long magnitude(long long value) { return value < 0 ? -value : value;
 
 // Pure selection: callers supply only the relevant workspace/monitor snapshot.
 inline std::optional<FocusWindowId> directionalFocus(const std::vector<FocusTarget>& targets,
-                                                    FocusWindowId current, FocusDirection direction) {
+                                                    FocusWindowId current, FocusDirection direction,
+                                                    bool wrap = false) {
     const auto axis = FocusDetail::axis(direction);
     if (!axis) return std::nullopt;
     const auto source = std::find_if(targets.begin(), targets.end(),
         [current](const FocusTarget& target) { return target.id == current; });
     if (source == targets.end() || !focusEligible(*source)) return std::nullopt;
     using Score = std::tuple<int, long long, long long, FocusWindowId>;
-    std::optional<Score> best;
-    std::optional<FocusWindowId> selected;
-    for (const auto& target : targets) {
-        if (target.id == current || !focusEligible(target)) continue;
-        const auto forward = axis->sign * (FocusDetail::center(target.bounds, axis->horizontal) -
-                                          FocusDetail::center(source->bounds, axis->horizontal));
-        if (forward <= 0) continue;
-        const auto cross = FocusDetail::magnitude(FocusDetail::center(target.bounds, !axis->horizontal) -
-                                                 FocusDetail::center(source->bounds, !axis->horizontal));
-        const auto overlap = FocusDetail::overlaps(source->bounds, target.bounds, !axis->horizontal);
-        const Score score{overlap ? 0 : 1, forward, cross, target.id};
-        if (!best || score < *best) { best = score; selected = target.id; }
-    }
-    return selected;
+    const auto choose = [&](bool wrapping) -> std::optional<FocusWindowId> {
+        std::optional<Score> best;
+        std::optional<FocusWindowId> selected;
+        for (const auto& target : targets) {
+            if (target.id == current || !focusEligible(target)) continue;
+            const auto targetCenter = FocusDetail::center(target.bounds, axis->horizontal);
+            const auto forward = axis->sign * (targetCenter -
+                                              FocusDetail::center(source->bounds, axis->horizontal));
+            if (wrapping ? forward >= 0 : forward <= 0) continue;
+            const auto cross = FocusDetail::magnitude(FocusDetail::center(target.bounds, !axis->horizontal) -
+                                                     FocusDetail::center(source->bounds, !axis->horizontal));
+            const auto overlap = FocusDetail::overlaps(source->bounds, target.bounds, !axis->horizontal);
+            const auto primary = wrapping ? axis->sign * targetCenter : forward;
+            const Score score{overlap ? 0 : 1, primary, cross, target.id};
+            if (!best || score < *best) { best = score; selected = target.id; }
+        }
+        return selected;
+    };
+    const auto forward = choose(false);
+    return forward || !wrap ? forward : choose(true);
 }
 }
