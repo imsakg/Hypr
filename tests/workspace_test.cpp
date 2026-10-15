@@ -129,4 +129,28 @@ TEST(closing_windows_preserves_focus_until_the_focused_member_is_removed) {
     CHECK(state.active() == 1);
     CHECK(!state.removeWindow(20));
 }
+TEST(empty_cleanup_protects_active_pinned_and_populated_workspaces) {
+    WorkspaceState state;
+    for (const auto id : {1, 2, 3, 4, 5}) state.addWorkspace(id);
+    CHECK(state.setPinned(2, true));
+    CHECK(!state.setPinned(99, true));
+    state.addWindow(3, 30);
+    state.activate(4);
+    state.activate(1);
+    CHECK(state.last() == 4);
+    CHECK(!state.removeWorkspace(1));
+    CHECK(!state.removeWorkspace(2));
+    CHECK(!state.removeWorkspace(3));
+    CHECK(!state.removeWorkspace(-1));
+    CHECK(state.cleanupEmpty() == std::vector<WorkspaceId>({4, 5}));
+    CHECK(state.ids() == std::vector<WorkspaceId>({1, 2, 3}));
+    CHECK(!state.last() && !state.toggleLast());
+    CHECK(state.workspace(2)->pinned);
+    CHECK(state.setPinned(2, false));
+    CHECK(state.removeWorkspace(2));
+    CHECK(!state.removeWorkspace(2));
+    state.removeWindow(30);
+    CHECK(state.cleanupEmpty() == std::vector<WorkspaceId>({3}));
+    CHECK(state.active() == 1);
+}
 TEST_MAIN()

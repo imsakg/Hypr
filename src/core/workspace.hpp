@@ -14,6 +14,7 @@ struct Workspace {
     WorkspaceId id = 0;
     std::vector<WorkspaceWindowId> windows;
     std::optional<WorkspaceWindowId> focused;
+    bool pinned = false;
 };
 
 // Values are read-only outside the state machine; rejected operations do not mutate it.
@@ -24,6 +25,25 @@ public:
         if (!workspaces_.emplace(id, Workspace{id}).second) return false;
         if (!active_) active_ = id;
         return true;
+    }
+    bool setPinned(WorkspaceId id, bool pinned) {
+        const auto it = workspaces_.find(id);
+        if (it == workspaces_.end()) return false;
+        it->second.pinned = pinned;
+        return true;
+    }
+    bool removeWorkspace(WorkspaceId id) {
+        const auto it = workspaces_.find(id);
+        if (it == workspaces_.end() || active_ == id || it->second.pinned || !it->second.windows.empty())
+            return false;
+        workspaces_.erase(it);
+        if (last_ == id) last_.reset();
+        return true;
+    }
+    std::vector<WorkspaceId> cleanupEmpty() {
+        std::vector<WorkspaceId> removed;
+        for (const auto id : ids()) if (removeWorkspace(id)) removed.push_back(id);
+        return removed;
     }
     const Workspace* workspace(WorkspaceId id) const {
         const auto it = workspaces_.find(id);
