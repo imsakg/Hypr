@@ -45,4 +45,9 @@ TEST(arrangements_skip_floating_and_hidden_clients) {
  const auto cells=arrange(Rect{0,0,100,80},{{10,false,false,false},{20,true,false,false},{30,false,true,false},{40,false,false,false}});
  CHECK(cells.size()==2); CHECK(cells[1].id==40); CHECK(cells[1].bounds.x==50);
 }
+TEST(fullscreen_ignores_tile_gaps_and_floating_state) {
+ LayoutOptions o; o.outerGap=10;
+ const auto cells=arrange(Rect{-10,2,100,80},{{1,false,false,false},{2,true,false,true}},o);
+ CHECK(cells.size()==1); CHECK(cells[0].id==2); CHECK(cells[0].bounds==Rect{-10,2,100,80});
+}
 TEST_MAIN()
