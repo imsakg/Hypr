@@ -102,6 +102,14 @@ inline std::optional<KeySym> parseKeysym(std::string_view text) {
         {"PAGE_UP", 0xff55}, {"PRIOR", 0xff55}, {"PAGE_DOWN", 0xff56}, {"NEXT", 0xff56}
     };
     for (const auto& key : navigation) if (key.name == name) return key.value;
+    if (name.size() >= 2 && name.size() <= 3 && name.front() == 'F' && name[1] != '0') {
+        unsigned number = 0;
+        for (std::size_t i = 1; i < name.size(); ++i) {
+            if (name[i] < '0' || name[i] > '9') return std::nullopt;
+            number = number * 10 + static_cast<unsigned>(name[i] - '0');
+        }
+        if (number >= 1 && number <= 35) return 0xffbdu + number;
+    }
     return std::nullopt;
 }
 }

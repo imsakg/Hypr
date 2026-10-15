@@ -76,4 +76,12 @@ TEST(named_navigation_keys_have_stable_protocol_values) {
     CHECK(parseKeysym("Page_Down") == 0xff56u);
     CHECK(!parseKeysym("LeftOver"));
 }
+TEST(function_keys_are_bounded_and_require_complete_canonical_numbers) {
+    for (unsigned i = 1; i <= 35; ++i)
+        CHECK(parseKeysym("F" + std::to_string(i)) == 0xffbdu + i);
+    CHECK(parseKeysym("f12") == 0xffc9u);
+    for (const auto* text : {"F0", "F01", "F36", "F-1", "F1junk", "F99999999999999999999"})
+        CHECK(!parseKeysym(text));
+    CHECK(parseKeysym("F") == static_cast<KeySym>('F'));
+}
 TEST_MAIN()
