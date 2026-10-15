@@ -10,4 +10,8 @@ TEST(vertical_rows_preserve_monitor_offsets) {
  LayoutOptions options; options.kind=LayoutKind::Vertical;
  CHECK(tile(Rect{-10,-20,100,60},2,options)[1]==Rect{-10,10,100,30});
 }
+TEST(odd_extents_have_no_missing_pixels) {
+ const auto cells=tile(Rect{0,0,101,30},3);
+ CHECK(cells[0].width==34); CHECK(cells[1].width==34); CHECK(cells[2]==Rect{68,0,33,30});
+}
 TEST_MAIN()

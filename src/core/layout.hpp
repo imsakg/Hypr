@@ -17,11 +17,15 @@ inline std::vector<Rect> splitAxis(Rect area, std::size_t count, bool horizontal
     (void)gap;
     const int extent = std::max(0,horizontal ? area.width : area.height);
     const int each = extent / static_cast<int>(count);
+    const int remainder = extent % static_cast<int>(count);
+    int offset = 0;
     std::vector<Rect> result;
     for (std::size_t i=0;i<count;++i) {
         Rect cell{area.x,area.y,std::max(0,area.width),std::max(0,area.height)};
-        if (horizontal) { cell.x = saturatedInt(static_cast<long long>(area.x)+i*each); cell.width = each; }
-        else { cell.y = saturatedInt(static_cast<long long>(area.y)+i*each); cell.height = each; }
+        const int size = each + (static_cast<int>(i) < remainder ? 1 : 0);
+        if (horizontal) { cell.x = saturatedInt(static_cast<long long>(area.x)+offset); cell.width = size; }
+        else { cell.y = saturatedInt(static_cast<long long>(area.y)+offset); cell.height = size; }
+        offset += size;
         result.push_back(cell);
     }
     return result;
