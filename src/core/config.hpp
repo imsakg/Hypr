@@ -283,6 +283,7 @@ struct Binding {
     std::string key;
     std::string dispatcher;
     std::string argument;
+    std::size_t line = 0;
 };
 
 struct BindingParseResult {
@@ -292,12 +293,42 @@ struct BindingParseResult {
 };
 
 inline BindingParseResult parseBinding(const std::string& text) {
+    if (!configQuotesClosed(text)) return {std::nullopt, "unclosed quote in binding"};
     std::vector<std::string> fields;
     try { fields = splitFields(text, 4); }
     catch (const std::invalid_argument& error) { return {std::nullopt, error.what()}; }
     if (fields.size() != 4) return {std::nullopt, "binding needs modifiers,key,dispatcher,argument"};
     if (fields[1].empty() || fields[2].empty()) return {std::nullopt, "binding key and dispatcher must not be empty"};
-    return {Binding{fields[0], fields[1], fields[2], fields[3]}, ""};
+    bool known = false;
+    for (const auto* name : {"exec", "killactive", "fullscreen", "movewindow", "movefocus", "workspace",
+                             "movetoworkspace", "lastworkspace", "togglefloating", "splitratio", "pseudo"})
+        if (fields[2] == name) known = true;
+    if (!known) return {std::nullopt, "unknown binding dispatcher: " + fields[2]};
+    if (fields[2] == "exec" && fields[3].empty()) return {std::nullopt, "exec requires a command"};
+    for (const auto* name : {"killactive", "fullscreen", "lastworkspace", "togglefloating", "pseudo"})
+        if (fields[2] == name && !fields[3].empty()) return {std::nullopt, "dispatcher does not take an argument"};
+    return {Binding{fields[0], fields[1], fields[2], fields[3], 0}, ""};
+}
+
+struct BindingList {
+    std::vector<Binding> bindings;
+    std::vector<ConfigError> errors;
+    bool ok() const { return errors.empty(); }
+};
+
+inline BindingList parseBindings(const ConfigDocument& document) {
+    BindingList result;
+    result.errors = document.errors;
+    for (const auto& entry : document.all("bind")) {
+        auto parsed = parseBinding(entry.value);
+        if (!parsed.ok()) result.errors.push_back({entry.line, parsed.error});
+        else {
+            parsed.binding->line = entry.line;
+            result.bindings.push_back(std::move(*parsed.binding));
+        }
+    }
+    if (!result.ok()) result.bindings.clear();
+    return result;
 }
 
 } // namespace HyprCore

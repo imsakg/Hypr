@@ -183,4 +183,20 @@ TEST(bindings_keep_shell_arguments_opaque_and_allow_unmodified_keys) {
     CHECK(!parseBinding("\"open,R,exec,xterm").ok());
 }
 
+TEST(binding_validation_is_fail_closed_and_source_aware) {
+    CHECK(!parseBinding("SUPER,R,unknown,x").ok());
+    CHECK(!parseBinding("SUPER,R,exec,").ok());
+    CHECK(!parseBinding("SUPER,R,killactive,extra").ok());
+    CHECK(!parseBinding("SUPER,R,exec,\"unfinished").ok());
+    const auto valid = parseBindings(parseConfig("bind=,F1,killactive,\nbind=SUPER,R,exec,xterm\n"));
+    CHECK(valid.ok());
+    CHECK(valid.bindings.size() == 2);
+    CHECK(valid.bindings[1].line == 2);
+    const auto invalid = parseBindings(parseConfig("bind=SUPER,R,exec,xterm\nbind=SUPER,Q,bogus,\n"));
+    CHECK(!invalid.ok());
+    CHECK(invalid.bindings.empty());
+    CHECK(invalid.errors[0].line == 2);
+    CHECK(!parseBindings(parseConfig("missing equals\n")).ok());
+}
+
 TEST_MAIN()
