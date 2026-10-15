@@ -54,4 +54,9 @@ TEST(first_snapshot_owns_layout_eligibility) {
  const auto cells=arrange(Rect{0,0,100,80},{{1,false,true,false},{1,false,false,true},{2,false,false,false},{2,false,false,false}});
  CHECK(cells.size()==1); CHECK(cells[0].id==2);
 }
+TEST(reverse_layout_changes_placement_not_client_data) {
+ LayoutOptions o; o.reverse=true;
+ const auto cells=arrange(Rect{0,0,100,80},{{1,false,false,false},{2,false,false,false}},o);
+ CHECK(cells[0].id==2); CHECK(cells[1].id==1);
+}
 TEST_MAIN()
