@@ -44,13 +44,18 @@ inline std::optional<ModifierMask> modifier(std::string_view token) {
 inline std::optional<ModifierMask> parseModifiers(std::string_view text) {
     ModifierMask result = 0;
     text = BindingDetail::trim(text);
+    if (BindingDetail::upper(text) == "NONE") return result;
     while (!text.empty()) {
         std::size_t end = 0;
-        while (end < text.size() && !BindingDetail::space(text[end])) ++end;
+        while (end < text.size() && !BindingDetail::space(text[end]) && text[end] != '+') ++end;
         const auto bit = BindingDetail::modifier(text.substr(0, end));
-        if (!bit) return std::nullopt;
+        if (!bit || (result & *bit)) return std::nullopt;
         result |= *bit;
         text = BindingDetail::trim(text.substr(end));
+        if (!text.empty() && text.front() == '+') {
+            text = BindingDetail::trim(text.substr(1));
+            if (text.empty()) return std::nullopt;
+        }
     }
     return result;
 }

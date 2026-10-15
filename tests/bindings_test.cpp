@@ -20,4 +20,10 @@ TEST(modifier_combinations_use_whole_whitespace_tokens) {
     CHECK(!parseModifiers("NOSUPER"));
     CHECK(!parseModifiers("SHIFTED"));
 }
+TEST(modifier_separators_are_explicit_and_duplicates_are_errors) {
+    CHECK(parseModifiers("SUPER + SHIFT") == (ModSuper | ModShift));
+    CHECK(parseModifiers("NONE") == 0u);
+    for (const auto* text : {"+SUPER", "SUPER+", "SUPER++SHIFT", "SUPER+ +SHIFT", "CTRL CONTROL", "NONE SHIFT", "SUPER,SHIFT", "SUPER|SHIFT", "SUPER SUPER"})
+        CHECK(!parseModifiers(text));
+}
 TEST_MAIN()
