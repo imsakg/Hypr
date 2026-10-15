@@ -42,6 +42,30 @@ xcb_keycode_t KeybindManager::getKeycodeFromKeysym(xcb_keysym_t keysym) {
 }
 
 // Dispatchers
+void KeybindManager::resizeactive(std::string args) {
+    const auto delta=HyprCore::resizeArgument(args);
+    const auto window=g_pWindowManager->getWindowFromDrawable(g_pWindowManager->LastWindow);
+    if (!delta || !window || !window->getIsFloating() || window->getFullscreen() || window->getDock() || window->getImmovable()) return;
+    const auto monitor=g_pWindowManager->getMonitorFromWindow(window);
+    if (!monitor) return;
+    HyprCore::SizeHints hints;
+    xcb_size_hints_t raw{};
+    if (xcb_icccm_get_wm_normal_hints_reply(g_pWindowManager->DisplayConnection,xcb_icccm_get_wm_normal_hints(g_pWindowManager->DisplayConnection,window->getDrawable()),&raw,nullptr)) {
+        if (raw.flags & XCB_ICCCM_SIZE_HINT_P_MIN_SIZE) { hints.minWidth=raw.min_width; hints.minHeight=raw.min_height; }
+        if (raw.flags & XCB_ICCCM_SIZE_HINT_P_MAX_SIZE) { hints.maxWidth=raw.max_width; hints.maxHeight=raw.max_height; }
+        if (raw.flags & XCB_ICCCM_SIZE_HINT_P_RESIZE_INC) { hints.widthIncrement=raw.width_inc; hints.heightIncrement=raw.height_inc; }
+        if (raw.flags & XCB_ICCCM_SIZE_HINT_BASE_SIZE) { hints.baseWidth=raw.base_width; hints.baseHeight=raw.base_height; }
+    }
+    const auto pos=window->getPosition(),size=window->getSize();
+    HyprCore::Rect area{(int)monitor->vecPosition.x,(int)monitor->vecPosition.y,(int)monitor->vecSize.x,(int)monitor->vecSize.y};
+    area=HyprCore::reserve(area,(int)monitor->vecReservedTopLeft.x,(int)monitor->vecReservedTopLeft.y,(int)monitor->vecReservedBottomRight.x,(int)monitor->vecReservedBottomRight.y);
+    auto result=HyprCore::fitInside(HyprCore::resizeBy({(int)pos.x,(int)pos.y,(int)size.x,(int)size.y},delta->first,delta->second,hints),area);
+    result.width=std::max(1,result.width); result.height=std::max(1,result.height);
+    window->setPosition(Vector2D(result.x,result.y)); window->setSize(Vector2D(result.width,result.height));
+    window->setEffectivePosition(window->getPosition()); window->setEffectiveSize(window->getSize());
+    window->setDefaultPosition(window->getPosition()); window->setDefaultSize(window->getSize());
+    window->setDirty(true);
+}
 
 void KeybindManager::killactive(std::string args) {
     // args unused

@@ -311,7 +311,7 @@ inline ConfigBindingParseResult parseConfigBinding(const std::string& text) {
     if (fields[1].empty() || fields[2].empty()) return {std::nullopt, "binding key and dispatcher must not be empty"};
     bool known = false;
     for (const auto* name : {"exec", "killactive", "fullscreen", "movewindow", "movefocus", "workspace",
-                             "movetoworkspace", "lastworkspace", "togglefloating", "splitratio", "pseudo"})
+                             "movetoworkspace", "lastworkspace", "togglefloating", "splitratio", "pseudo", "resizeactive"})
         if (fields[2] == name) known = true;
     if (!known) return {std::nullopt, "unknown binding dispatcher: " + fields[2]};
     if (fields[2] == "exec" && fields[3].empty()) return {std::nullopt, "exec requires a command"};
@@ -326,6 +326,10 @@ inline ConfigBindingParseResult parseConfigBinding(const std::string& text) {
     }
     if (fields[2] == "splitratio" && fields[3] != "+" && fields[3] != "-")
         return {std::nullopt, "splitratio expects exactly + or -"};
+    if (fields[2]=="resizeactive") {
+        std::istringstream stream(fields[3]); std::string x,y,extra;
+        if (!(stream>>x>>y) || (stream>>extra) || !parseInteger(x) || !parseInteger(y)) return {std::nullopt,"resizeactive expects two integer deltas"};
+    }
     return {ConfigBinding{fields[0], fields[1], fields[2], fields[3], 0}, ""};
 }
 

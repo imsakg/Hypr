@@ -39,4 +39,11 @@ inline std::optional<WorkspaceId> workspaceTarget(const std::vector<int>& ids,in
     if (active>0) state.activate(active);
     return state.resolveTarget(argument);
 }
+inline std::optional<std::pair<int,int>> resizeArgument(const std::string& input) {
+    std::istringstream stream(input); std::string x,y,extra;
+    if (!(stream>>x>>y) || (stream>>extra)) return std::nullopt;
+    const auto dx=parseInteger(x),dy=parseInteger(y);
+    if (!dx || !dy) return std::nullopt;
+    return std::pair<int,int>{*dx,*dy};
+}
 } // namespace HyprCore

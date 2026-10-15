@@ -47,4 +47,9 @@ TEST(focus_history_cleanup_is_idempotent_for_closed_clients) {
  FocusHistory history; history.remember(9); history.remember(3); CHECK(history.forget(9)); CHECK(!history.forget(9));
  CHECK(history.fallback({{9,{0,0,20,20}},{3,{30,0,20,20}}})==3);
 }
+TEST(resize_bindings_accept_exact_signed_pixel_pairs) {
+ CHECK(resizeArgument("20 -10")==std::make_pair(20,-10)); CHECK(!resizeArgument("20x -10"));
+ CHECK(!resizeArgument("20 -10 extra")); CHECK(parseConfigBinding("SUPER,H,resizeactive,20 -10").ok());
+ CHECK(!parseConfigBinding("SUPER,H,resizeactive,20").ok());
+}
 TEST_MAIN()

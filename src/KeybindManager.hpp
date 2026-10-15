@@ -29,4 +29,5 @@ namespace KeybindManager {
     void                movetoworkspace(std::string args);
     void                changeSplitRatio(std::string args);
     void                togglePseudoActive(std::string args);
+    void                resizeactive(std::string args);
 };

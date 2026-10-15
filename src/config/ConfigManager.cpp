@@ -123,6 +123,7 @@ void handleBind(const std::string& command, const std::string& value) {
     if (HANDLER == "togglefloating") dispatcher = KeybindManager::toggleActiveWindowFloating;
     if (HANDLER == "splitratio") dispatcher = KeybindManager::changeSplitRatio;
     if (HANDLER == "pseudo") dispatcher = KeybindManager::togglePseudoActive;
+    if (HANDLER == "resizeactive") dispatcher = KeybindManager::resizeactive;
 
     if (dispatcher && KEY != 0)
         {
