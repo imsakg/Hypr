@@ -19,4 +19,9 @@ inline Rect constrainSize(Rect r, SizeHints hints = {}) {
     r.height=snap(r.height,hints.baseHeight,hints.heightIncrement,minHeight,std::max(minHeight,hints.maxHeight));
     return r;
 }
+inline Rect resizeBy(Rect r,int deltaWidth,int deltaHeight,SizeHints hints = {}) {
+    r.width=saturatedInt(static_cast<long long>(r.width)+deltaWidth);
+    r.height=saturatedInt(static_cast<long long>(r.height)+deltaHeight);
+    return constrainSize(r,hints);
+}
 } // namespace HyprCore

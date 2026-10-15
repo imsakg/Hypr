@@ -14,4 +14,8 @@ TEST(terminal_cell_increments_snap_from_base_size) {
  CHECK(constrainSize(Rect{0,0,83,51},h)==Rect{0,0,76,50});
  h.widthIncrement=0; CHECK(constrainSize(Rect{0,0,83,51},h).width==83);
 }
+TEST(resize_deltas_saturate_before_enforcing_hints) {
+ CHECK(resizeBy(Rect{4,8,80,60},20,-100)==Rect{4,8,100,1});
+ CHECK(resizeBy(Rect{0,0,100,60},std::numeric_limits<int>::max(),0).width==std::numeric_limits<int>::max());
+}
 TEST_MAIN()
