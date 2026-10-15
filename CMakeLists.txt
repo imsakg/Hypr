@@ -1,11 +1,19 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.12)
 
-set(CMAKE_CXX_COMPILER "/bin/g++")
 
 project(Hypr 
     VERSION 0.1
     DESCRIPTION "A Modern OOP C++ Window Manager"
 )
+
+include(CTest)
+option(HYPR_BUILD_WM "Build the X11 window manager" ON)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
+if(NOT HYPR_BUILD_WM)
+    return()
+endif()
 
 set(CMAKE_MESSAGE_LOG_LEVEL "STATUS")
 
