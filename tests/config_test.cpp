@@ -153,4 +153,20 @@ TEST(repeated_directives_survive_and_scalar_lookup_is_last_wins) {
     CHECK(parseConfig("n=3\nn=bad\n").integer("n") == std::nullopt);
 }
 
+TEST(config_store_replaces_only_after_successful_parse) {
+    ConfigStore store;
+    CHECK(store.load("count=3\nexec=first\n"));
+    CHECK(!store.load("count=9\nbar {\n"));
+    CHECK(store.document().integer("count") == 3);
+    CHECK(store.document().all("exec").size() == 1);
+    CHECK(store.document().ok());
+    CHECK(!store.errors().empty());
+    CHECK(store.load("count=4\n"));
+    CHECK(store.document().integer("count") == 4);
+    CHECK(store.document().all("exec").empty());
+    CHECK(store.errors().empty());
+    CHECK(store.load(""));
+    CHECK(store.document().entries.empty());
+}
+
 TEST_MAIN()

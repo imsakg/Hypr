@@ -262,4 +262,20 @@ inline ConfigDocument parseConfig(const std::string& text) {
     return document;
 }
 
+class ConfigStore {
+public:
+    bool load(const std::string& text) {
+        auto candidate = parseConfig(text);
+        errors_ = candidate.errors;
+        if (!candidate.ok()) return false;
+        document_ = std::move(candidate);
+        return true;
+    }
+    const ConfigDocument& document() const { return document_; }
+    const std::vector<ConfigError>& errors() const { return errors_; }
+private:
+    ConfigDocument document_;
+    std::vector<ConfigError> errors_;
+};
+
 } // namespace HyprCore
