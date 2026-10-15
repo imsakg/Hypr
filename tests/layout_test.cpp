@@ -31,4 +31,10 @@ TEST(folded_layout_alternates_width_and_height) {
  const auto cells=tile(Rect{0,0,100,80},3,o);
  CHECK(cells[0]==Rect{0,0,50,80}); CHECK(cells[1]==Rect{50,0,50,40}); CHECK(cells[2]==Rect{50,40,50,40});
 }
+TEST(folded_ratios_are_finite_and_bounded) {
+ LayoutOptions o; o.kind=LayoutKind::Folded; o.ratio=0.8;
+ CHECK(tile(Rect{0,0,100,80},2,o)[0].width==80);
+ o.ratio=std::numeric_limits<double>::quiet_NaN(); CHECK(tile(Rect{0,0,100,80},2,o)[0].width==50);
+ o.ratio=2; CHECK(tile(Rect{0,0,100,80},2,o)[0].width==90);
+}
 TEST_MAIN()
