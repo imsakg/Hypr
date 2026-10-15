@@ -102,6 +102,18 @@ inline std::optional<KeySym> parseKeysym(std::string_view text) {
         {"PAGE_UP", 0xff55}, {"PRIOR", 0xff55}, {"PAGE_DOWN", 0xff56}, {"NEXT", 0xff56}
     };
     for (const auto& key : navigation) if (key.name == name) return key.value;
+    static constexpr NamedKey punctuation[] = {
+        {"EXCLAM", '!'}, {"QUOTEDBL", '"'}, {"NUMBERSIGN", '#'}, {"DOLLAR", '$'},
+        {"PERCENT", '%'}, {"AMPERSAND", '&'}, {"APOSTROPHE", '\''}, {"PARENLEFT", '('},
+        {"PARENRIGHT", ')'}, {"ASTERISK", '*'}, {"PLUS", '+'}, {"COMMA", ','},
+        {"MINUS", '-'}, {"PERIOD", '.'}, {"SLASH", '/'}, {"COLON", ':'},
+        {"SEMICOLON", ';'}, {"LESS", '<'}, {"EQUAL", '='}, {"GREATER", '>'},
+        {"QUESTION", '?'}, {"AT", '@'}, {"BRACKETLEFT", '['}, {"BACKSLASH", '\\'},
+        {"BRACKETRIGHT", ']'}, {"ASCIICIRCUM", '^'}, {"UNDERSCORE", '_'}, {"GRAVE", '`'},
+        {"BRACELEFT", '{'}, {"BAR", '|'}, {"BRACERIGHT", '}'}, {"ASCIITILDE", '~'},
+        {"QUOTELEFT", '`'}, {"QUOTERIGHT", '\''}
+    };
+    for (const auto& key : punctuation) if (key.name == name) return key.value;
     if (name.size() >= 2 && name.size() <= 3 && name.front() == 'F' && name[1] != '0') {
         unsigned number = 0;
         for (std::size_t i = 1; i < name.size(); ++i) {

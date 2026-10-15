@@ -84,4 +84,20 @@ TEST(function_keys_are_bounded_and_require_complete_canonical_numbers) {
         CHECK(!parseKeysym(text));
     CHECK(parseKeysym("F") == static_cast<KeySym>('F'));
 }
+TEST(named_punctuation_includes_delimiter_safe_aliases) {
+    const std::pair<const char*, char> entries[] = {
+        {"exclam", '!'}, {"quotedbl", '"'}, {"numbersign", '#'}, {"dollar", '$'},
+        {"percent", '%'}, {"ampersand", '&'}, {"apostrophe", '\''}, {"parenleft", '('},
+        {"parenright", ')'}, {"asterisk", '*'}, {"plus", '+'}, {"comma", ','},
+        {"minus", '-'}, {"period", '.'}, {"slash", '/'}, {"colon", ':'},
+        {"semicolon", ';'}, {"less", '<'}, {"equal", '='}, {"greater", '>'},
+        {"question", '?'}, {"at", '@'}, {"bracketleft", '['}, {"backslash", '\\'},
+        {"bracketright", ']'}, {"asciicircum", '^'}, {"underscore", '_'}, {"grave", '`'},
+        {"braceleft", '{'}, {"bar", '|'}, {"braceright", '}'}, {"asciitilde", '~'}
+    };
+    for (const auto& entry : entries) CHECK(parseKeysym(entry.first) == static_cast<KeySym>(entry.second));
+    CHECK(parseKeysym("quoteleft") == parseKeysym("grave"));
+    CHECK(parseKeysym("quoteright") == parseKeysym("apostrophe"));
+    CHECK(!parseKeysym("comma;echo nope"));
+}
 TEST_MAIN()
