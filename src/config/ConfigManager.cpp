@@ -80,31 +80,24 @@ void configSetValueSafe(const std::string& COMMAND, const std::string& VALUE) {
     }
     if (CONFIGENTRY.intValue != -1) {
         try {
-            if (VALUE.find("0x") == 0) {
-                // Values with 0x are hex
-                const auto VALUEWITHOUTHEX = VALUE.substr(2);
-                CONFIGENTRY.intValue = stol(VALUEWITHOUTHEX, nullptr, 16);
-            } else
-                CONFIGENTRY.intValue = stol(VALUE);
-        } catch (...) {
-            Debug::log(WARN, "Error reading value of " + COMMAND);
-            ConfigManager::parseError = "Error setting value <" + VALUE + "> for field <" + COMMAND + ">.";
-        }
+            const auto text=HyprCore::trim(VALUE);
+            std::size_t used=0;
+            const auto value=std::stoll(text,&used,text.rfind("0x",0)==0 || text.rfind("0X",0)==0 ? 16 : 10);
+            if (used!=text.size() || text.empty()) throw std::invalid_argument("trailing integer input");
+            if (COMMAND.rfind("col.",0)!=0 && COMMAND.find(":col.")==std::string::npos && (value<0 || value>1000000)) throw std::out_of_range("setting out of range");
+            if (COMMAND=="max_fps" && value==0) throw std::out_of_range("max_fps must be positive");
+            if (COMMAND=="main_mod") throw std::invalid_argument("expected modifier string");
+            CONFIGENTRY.intValue=value;
+        } catch (const std::exception&) { ConfigManager::parseError="Invalid integer for "+COMMAND+": "+VALUE; }
     } else if (CONFIGENTRY.floatValue != -1) {
-        try {
-            CONFIGENTRY.floatValue = stof(VALUE);
-        } catch (...) {
-            Debug::log(WARN, "Error reading value of " + COMMAND);
-            ConfigManager::parseError = "Error setting value <" + VALUE + "> for field <" + COMMAND + ">.";
-        }
-    } else if (CONFIGENTRY.strValue != "") {
-        try {
-            CONFIGENTRY.strValue = VALUE;
-        } catch (...) {
-            Debug::log(WARN, "Error reading value of " + COMMAND);
-            ConfigManager::parseError = "Error setting value <" + VALUE + "> for field <" + COMMAND + ">.";
-        }
+        const auto value=HyprCore::parseReal(VALUE);
+        if (!value || *value<0 || *value>1000000 || (COMMAND=="layout:fold_ratio" && (*value<0.1 || *value>0.9))) ConfigManager::parseError="Invalid finite real for "+COMMAND+": "+VALUE;
+        else CONFIGENTRY.floatValue=static_cast<float>(*value);
+    } else {
+        CONFIGENTRY.strValue=VALUE;
     }
+
+
 }
 
 void handleBind(const std::string& command, const std::string& value) {
@@ -263,19 +256,8 @@ void handleWindowRule(const std::string& command, const std::string& value) {
 }
 
 void parseLine(std::string& line) {
-    // first check if its not a comment
-    const auto COMMENTSTART = line.find_first_of('#');
-    if (COMMENTSTART == 0)
-        return;
-
-    // now, cut the comment off
-    if (COMMENTSTART != std::string::npos)
-        line = line.substr(0, COMMENTSTART);
-
-    // remove shit at the beginning
-    while (line[0] == ' ' || line[0] == '\t') {
-        line = line.substr(1);
-    }
+    line=HyprCore::trim(HyprCore::stripComment(line));
+    if (line.empty()) return;
 
     if (line.find(" {") != std::string::npos) {
         auto cat = line.substr(0, line.find(" {"));
@@ -296,8 +278,8 @@ void parseLine(std::string& line) {
     if (EQUALSPLACE == std::string::npos)
         return;
 
-    const auto COMMAND = line.substr(0, EQUALSPLACE);
-    const auto VALUE = line.substr(EQUALSPLACE + 1);
+    const auto COMMAND = HyprCore::trim(line.substr(0, EQUALSPLACE));
+    const auto VALUE = HyprCore::trim(line.substr(EQUALSPLACE + 1));
 
     if (COMMAND == "bind") {
         handleBind(COMMAND, VALUE);

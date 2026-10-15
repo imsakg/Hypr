@@ -17,4 +17,9 @@ TEST(flat_layout_close_and_reopen_reclaims_the_entire_area) {
  const auto split=arrange(bounds,{{1,false,false,false},{3,false,false,false}},o);
  CHECK(split.size()==2); CHECK(split[0].bounds.width+split[1].bounds.width==101);
 }
+TEST(runtime_config_handles_blank_lines_quotes_and_partial_numbers) {
+ const auto doc=parseConfig("  \n# comment\nexec = printf '#ok' # tail\n");
+ CHECK(doc.ok()); CHECK(doc.entries.size()==1); CHECK(doc.entries[0].value=="printf '#ok'");
+ CHECK(!parseReal("nan")); CHECK(!parseInteger("20px"));
+}
 TEST_MAIN()
