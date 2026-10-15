@@ -1,5 +1,6 @@
 #include "test.hpp"
 #include "core/focus.hpp"
+#include <limits>
 using namespace HyprCore;
 TEST(directional_focus_selects_forward_centers_on_each_axis) {
     const std::vector<FocusTarget> targets{
@@ -150,5 +151,60 @@ TEST(focus_cycles_do_not_get_stuck_on_duplicate_occurrences) {
     CHECK(cycleFocus(targets, 1) == 2);
     CHECK(cycleFocus(targets, 2, true) == 1);
     CHECK(!focusAtPoint(targets, 15, 5));
+}
+TEST(focus_geometry_handles_extreme_coordinates_half_centers_and_invalid_directions) {
+    const auto low = std::numeric_limits<int>::min();
+    const auto high = std::numeric_limits<int>::max();
+    const std::vector<FocusTarget> extremes{
+        {1, {low, low, high, high}}, {2, {high, low, high, high}},
+        {3, {low, high, high, high}}, {4, {high, high, high, high}}};
+    CHECK(directionalFocus(extremes, 1, FocusDirection::Right) == 2);
+    CHECK(directionalFocus(extremes, 2, FocusDirection::Left) == 1);
+    CHECK(directionalFocus(extremes, 1, FocusDirection::Down) == 3);
+    CHECK(directionalFocus(extremes, 4, FocusDirection::Up) == 2);
+    CHECK(directionalFocus(extremes, 1, FocusDirection::Left, true) == 2);
+    CHECK(focusAtPoint(extremes, high, high) == 4);
+    CHECK(focusAtPoint(extremes, -2, -2) == 1);
+    CHECK(!focusAtPoint(extremes, -1, -1));
+    CHECK(!directionalFocus(extremes, 1, static_cast<FocusDirection>(99), true));
+    CHECK(directionalFocus({{1, {0, 0, 1, 1}}, {2, {0, 0, 2, 1}}},
+                            1, FocusDirection::Right) == 2);
+    CHECK(!directionalFocus({{1, {0, 0, 2, 2}}, {2, {-1, -1, 4, 4}}},
+                             1, FocusDirection::Right, true));
+}
+TEST(directional_policies_are_invariant_under_translation_reflection_and_permutation) {
+    std::uint32_t seed = 0x71c3u;
+    const auto random = [&seed]() { seed = seed * 1664525u + 1013904223u; return seed; };
+    for (int layout = 0; layout < 100; ++layout) {
+        std::vector<FocusTarget> targets;
+        for (FocusWindowId id = 1; id <= 12; ++id) {
+            const auto x = static_cast<int>(random() % 801u) - 400;
+            const auto y = static_cast<int>(random() % 801u) - 400;
+            const auto width = static_cast<int>(random() % 100u) + 1;
+            const auto height = static_cast<int>(random() % 100u) + 1;
+            targets.push_back({id, {x, y, width, height}});
+        }
+        for (const auto direction : {FocusDirection::Left, FocusDirection::Right,
+                                     FocusDirection::Up, FocusDirection::Down}) {
+            for (const bool wrap : {false, true}) {
+                const auto expected = directionalFocus(targets, 1, direction, wrap);
+                auto reversed = targets;
+                std::reverse(reversed.begin(), reversed.end());
+                CHECK(directionalFocus(reversed, 1, direction, wrap) == expected);
+                auto translated = targets;
+                for (auto& target : translated) { target.bounds.x += 3000; target.bounds.y -= 2000; }
+                CHECK(directionalFocus(translated, 1, direction, wrap) == expected);
+                auto reflected = targets;
+                for (auto& target : reflected) {
+                    target.bounds.x = -target.bounds.x - target.bounds.width;
+                    target.bounds.y = -target.bounds.y - target.bounds.height;
+                }
+                const auto opposite = direction == FocusDirection::Left ? FocusDirection::Right :
+                    direction == FocusDirection::Right ? FocusDirection::Left :
+                    direction == FocusDirection::Up ? FocusDirection::Down : FocusDirection::Up;
+                CHECK(directionalFocus(reflected, 1, opposite, wrap) == expected);
+            }
+        }
+    }
 }
 TEST_MAIN()

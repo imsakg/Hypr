@@ -245,4 +245,59 @@ TEST(workspace_focus_fallback_prefers_recent_survivors_and_prunes_departures) {
     CHECK(state.focused() == 30);
     CHECK(state.workspace(1)->focusHistory == std::vector<WorkspaceWindowId>{30});
 }
+TEST(workspace_mixed_lifecycles_preserve_membership_visibility_and_focus_invariants) {
+    WorkspaceState state;
+    std::uint32_t seed = 0xa8b3u;
+    const auto random = [&seed]() { seed = seed * 1103515245u + 12345u; return seed >> 8; };
+    unsigned operations[10] = {};
+    for (const auto id : {1, 2, 3, 4, 5}) state.addWorkspace(id);
+    for (int step = 0; step < 1000; ++step) {
+        const auto workspace = static_cast<WorkspaceId>(random() % 5u) + 1;
+        const auto window = static_cast<WorkspaceWindowId>(random() % 8u) + 1;
+        const bool flag = random() % 2u;
+        const auto operation = random() % 10u;
+        ++operations[operation];
+        switch (operation) {
+            case 0: state.addWorkspace(workspace); break;
+            case 1: state.addWindow(workspace, window); break;
+            case 2: state.moveWindow(window, workspace); break;
+            case 3: state.removeWindow(window); break;
+            case 4: state.activate(workspace); break;
+            case 5: state.focusWindow(window); break;
+            case 6: state.setPinned(workspace, flag); break;
+            case 7: state.setSticky(window, flag); break;
+            case 8: state.setUrgent(window, flag); break;
+            case 9: state.cleanupEmpty(); break;
+        }
+        std::set<WorkspaceWindowId> live;
+        for (const auto id : state.ids()) {
+            const auto* local = state.workspace(id);
+            CHECK(local && local->id == id);
+            for (const auto member : local->windows) {
+                CHECK(member && live.insert(member).second);
+                CHECK(state.workspaceOf(member) == id);
+            }
+            CHECK(local->windows.empty() == !local->focused);
+            CHECK(local->focusHistory.empty() == !local->focused);
+            std::set<WorkspaceWindowId> history;
+            for (const auto member : local->focusHistory) {
+                CHECK(state.workspaceOf(member) == id);
+                CHECK(history.insert(member).second);
+            }
+            if (local->focused) CHECK(local->focusHistory.front() == *local->focused);
+            auto expected = local->windows;
+            for (const auto other : state.ids()) if (other != id)
+                for (const auto member : state.workspace(other)->windows)
+                    if (state.isSticky(member)) expected.push_back(member);
+            CHECK(state.visibleWindows(id) == expected);
+            CHECK(std::set<WorkspaceWindowId>(expected.begin(), expected.end()).size() == expected.size());
+        }
+        if (state.active()) CHECK(state.workspace(*state.active()));
+        if (state.last()) CHECK(state.workspace(*state.last()));
+        for (WorkspaceWindowId id = 1; id <= 8; ++id) if (!state.workspaceOf(id)) {
+            CHECK(!state.isSticky(id)); CHECK(!state.isUrgent(id));
+        }
+    }
+    for (const auto count : operations) CHECK(count > 0);
+}
 TEST_MAIN()
