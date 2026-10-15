@@ -187,12 +187,14 @@ inline ConfigDocument parseConfig(const std::string& text) {
         if (line.empty()) continue;
         const auto equal = configFindUnquoted(line, '=');
         if (line == "}") {
-            if (!scopes.empty()) scopes.pop_back();
+            if (scopes.empty()) document.errors.push_back({lineNumber, "unexpected closing category"});
+            else scopes.pop_back();
             continue;
         }
         if (equal == std::string::npos && line.back() == '{') {
             const auto name = configLower(trim(line.substr(0, line.size() - 1)));
-            if (!configIdentifier(name)) document.errors.push_back({lineNumber, "invalid category"});
+            if (!configIdentifier(name) || name.find(':') != std::string::npos)
+                document.errors.push_back({lineNumber, "invalid category"});
             else scopes.emplace_back(name, lineNumber);
             continue;
         }
@@ -212,6 +214,8 @@ inline ConfigDocument parseConfig(const std::string& text) {
         }
         document.entries.push_back({category, key, trim(line.substr(equal + 1)), lineNumber});
     }
+    for (const auto& scope : scopes)
+        document.errors.push_back({scope.second, "unclosed category: " + scope.first});
     return document;
 }
 

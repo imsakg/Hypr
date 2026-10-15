@@ -112,4 +112,17 @@ TEST(categories_are_case_insensitive_and_scopes_restore) {
     CHECK(parseConfig("value={literal}\n").entries[0].value == "{literal}");
 }
 
+TEST(malformed_categories_report_source_lines_without_crashing) {
+    const auto doc = parseConfig("}\ninvalid\nbar {\nheight=20\n");
+    CHECK(!doc.ok());
+    CHECK(doc.errors.size() == 3);
+    CHECK(doc.errors[0].line == 1);
+    CHECK(doc.errors[1].line == 2);
+    CHECK(doc.errors[2].line == 3);
+    CHECK(doc.errors[2].message.find("unclosed category") != std::string::npos);
+    for (const auto* text : {"{", "bar {}", "bar { trailing", "bar { {", "bad:name {\n}"})
+        CHECK(!parseConfig(text).ok());
+    CHECK(parseConfig("key=brace } in value\n").ok());
+}
+
 TEST_MAIN()
