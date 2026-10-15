@@ -46,6 +46,35 @@ inline bool overlaps(const Rect& a, const Rect& b, bool horizontal) {
 inline long long magnitude(long long value) { return value < 0 ? -value : value; }
 }
 
+class FocusHistory {
+public:
+    bool remember(FocusWindowId id) {
+        if (!id) return false;
+        forget(id);
+        history_.insert(history_.begin(), id);
+        return true;
+    }
+    bool forget(FocusWindowId id) {
+        const auto found = std::find(history_.begin(), history_.end(), id);
+        if (found == history_.end()) return false;
+        history_.erase(found);
+        return true;
+    }
+    const std::vector<FocusWindowId>& entries() const { return history_; }
+    std::optional<FocusWindowId> fallback(const std::vector<FocusTarget>& targets,
+                                         std::optional<FocusWindowId> excluded = std::nullopt) const {
+        for (const auto id : history_)
+            if (id != excluded)
+                for (const auto& target : targets)
+                    if (target.id == id && focusEligible(target)) return id;
+        for (const auto& target : targets)
+            if (target.id != excluded && focusEligible(target)) return target.id;
+        return std::nullopt;
+    }
+private:
+    std::vector<FocusWindowId> history_;
+};
+
 // Input order is the cycle order. Missing/ineligible current starts at the chosen end.
 inline std::optional<FocusWindowId> cycleFocus(const std::vector<FocusTarget>& targets,
                                               std::optional<FocusWindowId> current = std::nullopt,

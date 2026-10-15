@@ -92,4 +92,26 @@ TEST(focus_cycles_preserve_input_order_filter_eligibility_and_support_reverse) {
     CHECK(cycleFocus({{1, {0, 0, 10, 10}}}, 1) == 1);
     CHECK(!cycleFocus({{1, {0, 0, 10, 10}}}, 1, false, false));
 }
+TEST(focus_history_deduplicates_recency_and_falls_back_only_to_eligible_survivors) {
+    FocusHistory history;
+    CHECK(history.entries().empty());
+    CHECK(!history.remember(0));
+    CHECK(history.remember(10)); CHECK(history.remember(20)); CHECK(history.remember(30));
+    CHECK(history.remember(10));
+    CHECK(history.entries() == std::vector<FocusWindowId>({10, 30, 20}));
+    const std::vector<FocusTarget> targets{
+        {40, {0, 0, 10, 10}}, {10, {10, 0, 10, 10}, false},
+        {20, {20, 0, 10, 10}}, {30, {30, 0, 10, 10}, true, true, true}};
+    CHECK(history.fallback(targets) == 20);
+    CHECK(history.fallback(targets, 20) == 40);
+    CHECK(history.entries() == std::vector<FocusWindowId>({10, 30, 20}));
+    CHECK(history.forget(20)); CHECK(!history.forget(20)); CHECK(!history.forget(0));
+    CHECK(history.fallback(targets) == 40);
+    CHECK(history.fallback(targets, 40) == 20);
+    CHECK(!history.fallback({}));
+    CHECK(!history.fallback({{10, {0, 0, 10, 10}, false}}));
+    CHECK(!history.fallback({{40, {0, 0, 10, 10}}}, 40));
+    CHECK(history.remember(20));
+    CHECK(history.entries() == std::vector<FocusWindowId>({20, 10, 30}));
+}
 TEST_MAIN()
