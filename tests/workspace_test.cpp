@@ -32,4 +32,27 @@ TEST(workspace_navigation_wraps_existing_sorted_ids_not_numeric_gaps) {
     CHECK(!state.previousWorkspace(-1));
     CHECK(state.ids() == std::vector<WorkspaceId>({2, 8, 20}));
 }
+TEST(lastworkspace_toggles_only_successful_distinct_activations) {
+    WorkspaceState state;
+    CHECK(!state.active());
+    CHECK(!state.last());
+    CHECK(!state.toggleLast());
+    CHECK(!state.activate(99));
+    state.addWorkspace(4);
+    state.addWorkspace(1);
+    state.addWorkspace(9);
+    CHECK(state.active() == 4);
+    CHECK(!state.toggleLast());
+    CHECK(state.activate(1));
+    CHECK(state.active() == 1 && state.last() == 4);
+    CHECK(state.activate(1));
+    CHECK(state.last() == 4);
+    CHECK(!state.activate(-1));
+    CHECK(!state.activate(99));
+    CHECK(state.active() == 1 && state.last() == 4);
+    CHECK(state.toggleLast());
+    CHECK(state.active() == 4 && state.last() == 1);
+    CHECK(state.toggleLast());
+    CHECK(state.active() == 1 && state.last() == 4);
+}
 TEST_MAIN()

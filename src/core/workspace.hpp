@@ -15,12 +15,25 @@ class WorkspaceState {
 public:
     bool addWorkspace(WorkspaceId id) {
         if (id <= 0) return false;
-        return workspaces_.emplace(id, Workspace{id}).second;
+        if (!workspaces_.emplace(id, Workspace{id}).second) return false;
+        if (!active_) active_ = id;
+        return true;
     }
     const Workspace* workspace(WorkspaceId id) const {
         const auto it = workspaces_.find(id);
         return it == workspaces_.end() ? nullptr : &it->second;
     }
+    std::optional<WorkspaceId> active() const { return active_; }
+    std::optional<WorkspaceId> last() const { return last_; }
+    bool activate(WorkspaceId id) {
+        if (!workspace(id)) return false;
+        if (active_ != id) {
+            last_ = active_;
+            active_ = id;
+        }
+        return true;
+    }
+    bool toggleLast() { return last_ && activate(*last_); }
     std::optional<WorkspaceId> nextWorkspace(WorkspaceId from) const {
         auto it = workspaces_.find(from);
         if (it == workspaces_.end()) return std::nullopt;
@@ -41,5 +54,7 @@ public:
     }
 private:
     std::map<WorkspaceId, Workspace> workspaces_;
+    std::optional<WorkspaceId> active_;
+    std::optional<WorkspaceId> last_;
 };
 }
