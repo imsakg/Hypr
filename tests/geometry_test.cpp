@@ -15,4 +15,8 @@ TEST(insets_handle_oversized_and_negative_gaps) {
  CHECK(inset(Rect{0,0,2,2},9) == Rect{1,1,0,0});
  CHECK(inset(Rect{0,0,2,2},-1) == Rect{0,0,2,2});
 }
+TEST(intersections_allow_negative_monitor_origins) {
+ CHECK(intersection(Rect{-50,0,100,80},Rect{0,10,80,100}) == Rect{0,10,50,70});
+ CHECK(intersection(Rect{0,0,1,1},Rect{3,4,1,1}).width == 0);
+}
 TEST_MAIN()

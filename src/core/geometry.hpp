@@ -17,6 +17,12 @@ inline Rect inset(Rect r, int amount) {
     const int y = std::min(std::max(0, amount), std::max(0, r.height) / 2);
     return {saturatedInt(static_cast<long long>(r.x) + x), saturatedInt(static_cast<long long>(r.y) + y), std::max(0, r.width - 2*x), std::max(0, r.height - 2*y)};
 }
+inline Rect intersection(const Rect& a, const Rect& b) {
+    const long long x = std::max(a.x,b.x), y = std::max(a.y,b.y);
+    const auto right = std::min(static_cast<long long>(a.x) + std::max(0,a.width), static_cast<long long>(b.x) + std::max(0,b.width));
+    const auto bottom = std::min(static_cast<long long>(a.y) + std::max(0,a.height), static_cast<long long>(b.y) + std::max(0,b.height));
+    return {saturatedInt(x), saturatedInt(y), saturatedInt(std::max(0LL,right-x)), saturatedInt(std::max(0LL,bottom-y))};
+}
 inline bool contains(const Rect& r, int x, int y) {
     return r.width > 0 && r.height > 0 && x >= r.x && y >= r.y &&
            static_cast<long long>(x) < static_cast<long long>(r.x) + r.width &&
