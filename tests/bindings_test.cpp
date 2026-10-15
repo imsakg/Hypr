@@ -111,4 +111,16 @@ TEST(binding_fields_are_validated_before_a_value_is_returned) {
     for (const auto* text : {"", "SUPER,q", "SUPER,,exec", "SUPER,q,", "BOGUS,q,exec", "SUPER,unknown,exec", "SUPER,q,exec junk", "SUPER,q,;exec"})
         CHECK(!parseBinding(text));
 }
+TEST(action_arguments_preserve_commas_quotes_and_comment_characters) {
+    const auto binding = parseBinding("SUPER,comma,exec,  printf '%s,%s' a b # literal  ");
+    CHECK(binding);
+    CHECK(binding->key == static_cast<KeySym>(','));
+    CHECK(binding->argument == "printf '%s,%s' a b # literal");
+    const auto quoted = parseBinding("NONE,Space,exec,echo \"x,y\" \\path");
+    CHECK(quoted);
+    CHECK(quoted->argument == "echo \"x,y\" \\path");
+    CHECK(parseBinding("SUPER,q,close,")->argument.empty());
+    CHECK(parseBinding("SUPER,q,exec,,leading,tail")->argument == ",leading,tail");
+    CHECK(!parseBinding("SUPER,q,,argument"));
+}
 TEST_MAIN()

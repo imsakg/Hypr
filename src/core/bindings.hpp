@@ -152,8 +152,12 @@ inline std::optional<Binding> parseBinding(std::string_view text) {
     const auto modifiers = parseModifiers(text.substr(0, first));
     const auto keyText = BindingDetail::trim(text.substr(first + 1, second - first - 1));
     const auto key = parseKeysym(keyText);
-    const auto action = BindingDetail::trim(text.substr(second + 1));
+    const auto third = text.find(',', second + 1);
+    const auto action = BindingDetail::trim(text.substr(second + 1,
+        third == std::string_view::npos ? third : third - second - 1));
+    const auto argument = third == std::string_view::npos ? std::string_view{} :
+        BindingDetail::trim(text.substr(third + 1));
     if (!modifiers || !key || !BindingDetail::actionName(action)) return std::nullopt;
-    return Binding{*modifiers, *key, std::string(action), {}};
+    return Binding{*modifiers, *key, std::string(action), std::string(argument)};
 }
 }
