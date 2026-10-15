@@ -134,4 +134,30 @@ TEST(rule_sets_compile_in_source_order_with_fail_closed_line_diagnostics) {
     CHECK(parseRules(parseConfig("bar {\nwindowrule=not a top-level rule\n}\n")).rules.empty());
 }
 
+TEST(rule_resolution_is_last_match_wins_per_independent_property) {
+    const auto rules = parseRules(parseConfig(
+        "windowrule=float,class:term\nwindowrule=pseudo,class:term\nwindowrule=nointerventions,class:term\n"
+        "windowrule=move -50 20,class:term\nwindowrule=size 500 100,class:term\nwindowrule=workspace 3,class:term\n"
+        "windowrule=monitor 0,class:term\nwindowrule=tile,title:Edit\nwindowrule=pseudo off,title:Edit\n"
+        "windowrule=move 10 -20,title:Edit\nwindowrule=workspace 5,title:Edit\nwindowrule=size 9 9,class:other\n"));
+    CHECK(rules.ok());
+    const auto resolved = rules.resolve({"term", "", "Editor"});
+    CHECK(resolved.floating == false);
+    CHECK(resolved.pseudo == false);
+    CHECK(resolved.noInterventions == true);
+    CHECK(resolved.workspace == 5);
+    CHECK(resolved.monitor == 0);
+    CHECK(resolved.position == std::make_pair(10, -20));
+    CHECK(resolved.size == std::make_pair(500, 100));
+    const auto unmodified = rules.resolve({"term", "", "Other"});
+    CHECK(unmodified.floating == true);
+    CHECK(unmodified.pseudo == true);
+    CHECK(unmodified.workspace == 3);
+    CHECK(unmodified.position == std::make_pair(-50, 20));
+    const auto absent = rules.resolve({"nothing", "", ""});
+    CHECK(!absent.floating && !absent.pseudo && !absent.noInterventions);
+    CHECK(!absent.workspace && !absent.monitor && !absent.position && !absent.size);
+    CHECK(!parseRules(parseConfig("windowrule=float,class:[\n")).resolve({"term", "", ""}).floating);
+}
+
 TEST_MAIN()

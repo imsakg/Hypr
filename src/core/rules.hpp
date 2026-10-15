@@ -147,6 +147,17 @@ inline RuleParseResult parseRule(const std::string& input, std::size_t line = 0)
     return {std::move(rule), ""};
 }
 
+struct ResolvedRules {
+    // Disengaged optionals leave the corresponding window property unchanged.
+    std::optional<bool> floating;
+    std::optional<bool> pseudo;
+    std::optional<bool> noInterventions;
+    std::optional<int> workspace;
+    std::optional<int> monitor;
+    std::optional<std::pair<int, int>> position;
+    std::optional<std::pair<int, int>> size;
+};
+
 struct RuleSet {
     std::vector<Rule> rules;
     std::vector<ConfigError> errors;
@@ -156,6 +167,25 @@ struct RuleSet {
         std::vector<const Rule*> result;
         if (!ok()) return result;
         for (const auto& rule : rules) if (rule.matches(window)) result.push_back(&rule);
+        return result;
+    }
+    ResolvedRules resolve(const WindowProperties& window) const {
+        ResolvedRules result;
+        if (!ok()) return result;
+        for (const auto& rule : rules) {
+            if (!rule.matches(window)) continue;
+            const auto& action = rule.action();
+            switch (action.type) {
+                case RuleActionType::Float: result.floating = true; break;
+                case RuleActionType::Tile: result.floating = false; break;
+                case RuleActionType::Pseudo: result.pseudo = action.enabled; break;
+                case RuleActionType::NoInterventions: result.noInterventions = action.enabled; break;
+                case RuleActionType::Workspace: result.workspace = action.first; break;
+                case RuleActionType::Monitor: result.monitor = action.first; break;
+                case RuleActionType::Move: result.position = std::make_pair(action.first, action.second); break;
+                case RuleActionType::Size: result.size = std::make_pair(action.first, action.second); break;
+            }
+        }
         return result;
     }
 };
