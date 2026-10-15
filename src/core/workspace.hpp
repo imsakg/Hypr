@@ -6,6 +6,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <set>
 #include <string_view>
 #include <system_error>
 #include <vector>
@@ -67,6 +68,23 @@ public:
         if (!it->second.focused) it->second.focused = window;
         return true;
     }
+    bool setSticky(WorkspaceWindowId window, bool sticky) {
+        if (!workspaceOf(window)) return false;
+        if (sticky) sticky_.insert(window);
+        else sticky_.erase(window);
+        return true;
+    }
+    bool isSticky(WorkspaceWindowId window) const { return sticky_.count(window) != 0; }
+    std::vector<WorkspaceWindowId> visibleWindows(WorkspaceId id) const {
+        const auto* local = workspace(id);
+        if (!local) return {};
+        auto result = local->windows;
+        for (const auto& item : workspaces_)
+            if (item.first != id)
+                for (const auto window : item.second.windows)
+                    if (isSticky(window)) result.push_back(window);
+        return result;
+    }
     bool moveWindow(WorkspaceWindowId window, WorkspaceId destination) {
         const auto from = workspaceOf(window);
         const auto target = workspaces_.find(destination);
@@ -82,6 +100,7 @@ public:
         const auto home = workspaceOf(window);
         if (!home) return false;
         detach(workspaces_.at(*home), window);
+        sticky_.erase(window);
         return true;
     }
     std::optional<WorkspaceWindowId> focused() const {
@@ -150,6 +169,7 @@ private:
         if (source.focused == window) source.focused = source.windows.empty() ?
             std::nullopt : std::optional<WorkspaceWindowId>{source.windows.front()};
     }
+    std::set<WorkspaceWindowId> sticky_;
     std::map<WorkspaceId, Workspace> workspaces_;
     std::optional<WorkspaceId> active_;
     std::optional<WorkspaceId> last_;

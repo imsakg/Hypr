@@ -176,4 +176,28 @@ TEST(workspace_targets_validate_full_signed_offsets_before_arithmetic) {
     CHECK(!state.resolveTarget("-2147483647"));
     CHECK(state.active() == 2147483647);
 }
+TEST(sticky_visibility_does_not_duplicate_or_transfer_ownership) {
+    WorkspaceState state;
+    state.addWorkspace(1); state.addWorkspace(2);
+    state.addWindow(1, 10); state.addWindow(1, 11); state.addWindow(2, 20);
+    CHECK(!state.setSticky(99, true));
+    CHECK(state.setSticky(10, true));
+    CHECK(state.isSticky(10));
+    CHECK(state.visibleWindows(1) == std::vector<WorkspaceWindowId>({10, 11}));
+    CHECK(state.visibleWindows(2) == std::vector<WorkspaceWindowId>({20, 10}));
+    CHECK(state.visibleWindows(-1).empty());
+    CHECK(state.workspaceOf(10) == 1);
+    state.activate(2);
+    CHECK(!state.focusWindow(10));
+    CHECK(state.moveWindow(10, 2));
+    CHECK(state.visibleWindows(2) == std::vector<WorkspaceWindowId>({20, 10}));
+    CHECK(state.visibleWindows(1) == std::vector<WorkspaceWindowId>({11, 10}));
+    CHECK(state.setSticky(10, false));
+    CHECK(state.visibleWindows(1) == std::vector<WorkspaceWindowId>({11}));
+    state.setSticky(10, true);
+    state.removeWindow(10);
+    CHECK(!state.isSticky(10));
+    state.addWindow(1, 10);
+    CHECK(!state.isSticky(10));
+}
 TEST_MAIN()
