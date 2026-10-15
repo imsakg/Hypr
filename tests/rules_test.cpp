@@ -25,4 +25,19 @@ TEST(role_and_title_conditions_use_their_own_properties) {
     CHECK(parseRule("float,title:^$").rule->matches({"", "", ""}));
 }
 
+TEST(invalid_or_missing_regexes_never_create_matching_rules) {
+    for (const auto* text : {"float,class:", "float,class:  ", "float,class:[", "float,role:(", "float,title:*",
+                             "float,unknown:.*", "float,class", "float", "float,"}) {
+        const auto result = parseRule(text);
+        CHECK(!result.ok());
+        CHECK(!result.rule);
+        CHECK(!result.error.empty());
+    }
+    CHECK(!Rule{}.matches({"anything", "anything", "anything"}));
+    const auto valid = parseRule("float,class:.*", 17);
+    CHECK(valid.ok());
+    CHECK(valid.rule->line() == 17);
+    CHECK(valid.rule->matches({"", "", ""}));
+}
+
 TEST_MAIN()

@@ -51,7 +51,11 @@ public:
             const std::string* property = &window.className;
             if (condition.target == RuleTarget::Role) property = &window.role;
             else if (condition.target == RuleTarget::Title) property = &window.title;
-            if (!std::regex_search(*property, condition.expression)) return false;
+            try {
+                if (!std::regex_search(*property, condition.expression)) return false;
+            } catch (const std::regex_error&) {
+                return false;
+            }
         }
         return true;
     }
@@ -81,12 +85,13 @@ inline RuleParseResult parseRule(const std::string& input, std::size_t line = 0)
     else if (targetName == "title") target = RuleTarget::Title;
     else if (targetName != "class") return {std::nullopt, "unknown rule target: " + targetName};
     if (colon == std::string::npos) return {std::nullopt, "expected target:regex condition"};
-    const auto pattern = condition.substr(colon + 1);
+    const auto pattern = trim(condition.substr(colon + 1));
+    if (pattern.empty()) return {std::nullopt, "rule regex must not be empty"};
     Rule rule;
     rule.action_ = *action.action;
     rule.line_ = line;
     try {
-        rule.conditions_.push_back({target, pattern, std::regex(pattern), false});
+        rule.conditions_.push_back({target, pattern, std::regex(pattern, std::regex::ECMAScript | std::regex::optimize), false});
     } catch (const std::regex_error& error) {
         return {std::nullopt, std::string("invalid regex: ") + error.what()};
     }
