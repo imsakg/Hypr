@@ -37,4 +37,8 @@ TEST(folded_ratios_are_finite_and_bounded) {
  o.ratio=std::numeric_limits<double>::quiet_NaN(); CHECK(tile(Rect{0,0,100,80},2,o)[0].width==50);
  o.ratio=2; CHECK(tile(Rect{0,0,100,80},2,o)[0].width==90);
 }
+TEST(folded_layout_can_start_on_the_vertical_axis) {
+ LayoutOptions o; o.kind=LayoutKind::Folded; o.foldHorizontal=false;
+ CHECK(tile(Rect{-30,4,80,100},2,o)[0]==Rect{-30,4,80,50});
+}
 TEST_MAIN()
