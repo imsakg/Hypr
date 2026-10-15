@@ -28,4 +28,13 @@ TEST(signed_decimal_is_strict_and_bounded) {
         CHECK(!parseInteger(text));
 }
 
+TEST(hexadecimal_is_signed_not_unsigned_reinterpretation) {
+    CHECK(parseInteger("0x2a") == 42);
+    CHECK(parseInteger("+0X7f") == 127);
+    CHECK(parseInteger("-0x80000000") == (-2147483647 - 1));
+    CHECK(parseInteger("0x7fffffff") == 2147483647);
+    for (const auto* text : {"0x", "-0X", "0xg", "0x1tail", "0x80000000", "0xffffffff", "-0x80000001", "0b11"})
+        CHECK(!parseInteger(text));
+}
+
 TEST_MAIN()
