@@ -16,4 +16,22 @@ inline std::string trim(const std::string& text) {
     return text.substr(first, last - first);
 }
 
+inline std::string stripComment(const std::string& text) {
+    char quote = 0;
+    bool escaped = false;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (escaped) { escaped = false; continue; }
+        if (c == '\\') { escaped = true; continue; }
+        if (quote) {
+            if (c == quote) quote = 0;
+        } else if (c == '\'' || c == '"') {
+            quote = c;
+        } else if (c == '#') {
+            return text.substr(0, i);
+        }
+    }
+    return text;
+}
+
 } // namespace HyprCore
